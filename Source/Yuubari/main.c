@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2017
+*  (C) COPYRIGHT AUTHORS, 2014 - 2019
 *
 *  TITLE:       MAIN.C
 *
-*  VERSION:     1.27
+*  VERSION:     1.40
 *
-*  DATE:        28 Oct 2017
+*  DATE:        19 Mar 2019
 *
 *  Program entry point.
 *
@@ -21,7 +21,6 @@
 
 BOOL    g_VerboseOutput = FALSE;
 ULONG   g_NtBuildNumber = 0;
-HANDLE  g_ConOut = NULL;
 HANDLE  g_LogFile = INVALID_HANDLE_VALUE;
 
 /*
@@ -34,7 +33,7 @@ HANDLE  g_LogFile = INVALID_HANDLE_VALUE;
 */
 VOID AppInfoDataOutputCallback(
     UAC_AI_DATA *Data
-    )
+)
 {
     LPWSTR lpLog = NULL, Text = NULL;
     SIZE_T sz = 0;
@@ -43,7 +42,7 @@ VOID AppInfoDataOutputCallback(
         return;
 
     sz = (_strlen(Data->Name) * sizeof(WCHAR)) + MAX_PATH;
-    lpLog = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sz);
+    lpLog = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sz);
     if (lpLog) {
         switch (Data->Type) {
         case AiSnapinFile:
@@ -78,7 +77,7 @@ VOID AppInfoDataOutputCallback(
         _strcat(lpLog, Data->Name);
         LoggerWrite(g_LogFile, lpLog, TRUE);
 
-        cuiPrintText(g_ConOut, lpLog, TRUE, TRUE);
+        cuiPrintText(lpLog, TRUE);
         HeapFree(GetProcessHeap(), 0, lpLog);
     }
 }
@@ -93,7 +92,7 @@ VOID AppInfoDataOutputCallback(
 */
 VOID WINAPI BasicDataOutputCallback(
     UAC_BASIC_DATA *Data
-    )
+)
 {
     LPWSTR lpLog = NULL;
     SIZE_T sz = 0;
@@ -102,7 +101,7 @@ VOID WINAPI BasicDataOutputCallback(
         return;
 
     sz = (_strlen(Data->Name) * sizeof(WCHAR)) + MAX_PATH;
-    lpLog = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sz);
+    lpLog = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sz);
     if (lpLog) {
         _strcpy(lpLog, Data->Name);
         _strcat(lpLog, TEXT("="));
@@ -116,7 +115,7 @@ VOID WINAPI BasicDataOutputCallback(
             ultostr(Data->Value, _strend(lpLog));
         }
         LoggerWrite(g_LogFile, lpLog, TRUE);
-        cuiPrintText(g_ConOut, lpLog, TRUE, TRUE);
+        cuiPrintText(lpLog, TRUE);
         HeapFree(GetProcessHeap(), 0, lpLog);
     }
 }
@@ -131,7 +130,7 @@ VOID WINAPI BasicDataOutputCallback(
 */
 VOID WINAPI RegistryOutputCallback(
     UAC_REGISTRY_DATA *Data
-    )
+)
 {
     UAC_INTERFACE_DATA *InterfaceData;
     LPOLESTR OutputString = NULL;
@@ -145,34 +144,34 @@ VOID WINAPI RegistryOutputCallback(
         // Output current registry key to show that we are alive.
         //
         LoggerWrite(g_LogFile, Data->Name, TRUE);
-        cuiPrintText(g_ConOut, Data->Key, TRUE, TRUE);
+        cuiPrintText(Data->Key, TRUE);
         LoggerWrite(g_LogFile, Data->AppId, TRUE);
         LoggerWrite(g_LogFile, Data->LocalizedString, TRUE);
         LoggerWrite(g_LogFile, Data->Key, TRUE);
-        LoggerWrite(g_LogFile, TEXT("\n"), TRUE);
+        LoggerWrite(g_LogFile, TEXT("\r\n"), TRUE);
     }
 
     if (Data->DataType == UacCOMDataInterfaceType) {
 
-        InterfaceData = (UAC_INTERFACE_DATA*)Data;
+        InterfaceData = (UAC_INTERFACE_DATA*)(PVOID)Data;
 
         LoggerWrite(g_LogFile, InterfaceData->Name, TRUE);
-        cuiPrintText(g_ConOut, InterfaceData->Name, TRUE, TRUE);
+        cuiPrintText(InterfaceData->Name, TRUE);
 
         if (StringFromCLSID(&InterfaceData->Clsid, &OutputString) == S_OK) {
             LoggerWrite(g_LogFile, TEXT("CLSID"), TRUE);
             LoggerWrite(g_LogFile, OutputString, TRUE);
-            cuiPrintText(g_ConOut, OutputString, TRUE, TRUE);
+            cuiPrintText(OutputString, TRUE);
             CoTaskMemFree(OutputString);
         }
         if (StringFromIID(&InterfaceData->IID, &OutputString) == S_OK) {
             LoggerWrite(g_LogFile, TEXT("IID"), TRUE);
             LoggerWrite(g_LogFile, OutputString, TRUE);
-            cuiPrintText(g_ConOut, OutputString, TRUE, TRUE);
+            cuiPrintText(OutputString, TRUE);
             CoTaskMemFree(OutputString);
         }
-        LoggerWrite(g_LogFile, TEXT("\n"), TRUE);
-        cuiPrintText(g_ConOut, TEXT("\n"), TRUE, TRUE);
+        LoggerWrite(g_LogFile, TEXT("\r\n"), TRUE);
+        cuiPrintText(TEXT("\r\n"), TRUE);
     }
 }
 
@@ -186,7 +185,7 @@ VOID WINAPI RegistryOutputCallback(
 */
 VOID WINAPI FusionOutputCallback(
     UAC_FUSION_DATA *Data
-    )
+)
 {
     LPWSTR lpText;
     LPWSTR lpLog = NULL;
@@ -201,7 +200,7 @@ VOID WINAPI FusionOutputCallback(
         //
         // Display only binaries with autoelevation flags if not in verbose output
         //
-        if ((Data->AutoElevateState == AutoElevateUnspecified) && (g_VerboseOutput == FALSE)) 
+        if ((Data->AutoElevateState == AutoElevateUnspecified) && (g_VerboseOutput == FALSE))
             return;
 
         //
@@ -209,12 +208,12 @@ VOID WINAPI FusionOutputCallback(
         //
         LoggerWrite(g_LogFile, TEXT("\r\n"), FALSE);
         LoggerWrite(g_LogFile, Data->Name, TRUE);
-        cuiPrintText(g_ConOut, Data->Name, TRUE, TRUE);
+        cuiPrintText(Data->Name, TRUE);
 
         //
         // If application has autoElevate attribute, report full info
         //
-        if (Data->IsFusion) {           
+        if (Data->IsFusion) {
             switch (Data->RunLevel.RunLevel) {
             case ACTCTX_RUN_LEVEL_AS_INVOKER:
                 lpText = TEXT("asInvoker");
@@ -232,7 +231,7 @@ VOID WINAPI FusionOutputCallback(
             }
             //RequestedExecutionLevel 
             LoggerWrite(g_LogFile, lpText, TRUE);
-           
+
             if (Data->RunLevel.UiAccess > 0) {
                 lpText = TEXT("uiAccess=TRUE");
             }
@@ -280,7 +279,7 @@ VOID WINAPI FusionOutputCallback(
     if (Data->DataType == UacFusionDataRedirectedDllType) {
         Dll = (UAC_FUSION_DATA_DLL*)Data;
         sz = _strlen(Dll->DllName) + _strlen(Dll->FileName) + MAX_PATH;
-        lpLog = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sz * sizeof(WCHAR));
+        lpLog = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sz * sizeof(WCHAR));
         if (lpLog) {
             _strcpy(lpLog, TEXT("DllRedirection: "));
             _strcat(lpLog, Dll->FileName);
@@ -302,11 +301,12 @@ VOID WINAPI FusionOutputCallback(
 */
 VOID ListBasicSettings(
     VOID
-    )
+)
 {
-    cuiPrintText(g_ConOut, TEXT("\n[UacView] Basic UAC settings\n"), TRUE, TRUE);
-    ScanBasicUacData((BASICDATACALLBACK)BasicDataOutputCallback);
-    LoggerWrite(g_LogFile, TEXT("================================================\n"), TRUE);
+    cuiPrintText(T_BASIC_HEAD, TRUE);
+    LoggerWrite(g_LogFile, T_BASIC_HEAD, TRUE);
+    ScanBasicUacData((OUTPUTCALLBACK)BasicDataOutputCallback);
+    LoggerWrite(g_LogFile, T_SPLIT, TRUE);
 }
 
 /*
@@ -319,11 +319,23 @@ VOID ListBasicSettings(
 */
 VOID ListCOMFromRegistry(
     VOID
-    )
+)
 {
-    cuiPrintText(g_ConOut, TEXT("\n[UacView] Autoelevated COM objects\n"), TRUE, TRUE);
-    CoListInformation((REGCALLBACK)RegistryOutputCallback);
-    LoggerWrite(g_LogFile, TEXT("================================================\n"), TRUE);
+    cuiPrintText(T_COM_HEAD, TRUE);
+    LoggerWrite(g_LogFile, T_COM_HEAD, TRUE);
+    CoListInformation((OUTPUTCALLBACK)RegistryOutputCallback);
+    LoggerWrite(g_LogFile, T_SPLIT, TRUE);
+
+
+    //
+    // AutoApproval COM list added since RS1.
+    //
+    if (g_NtBuildNumber >= 14393) {
+        cuiPrintText(T_COM_APPROVE_HEAD, TRUE);
+        LoggerWrite(g_LogFile, T_COM_APPROVE_HEAD, TRUE);
+        CoScanAutoApprovalList((OUTPUTCALLBACK)RegistryOutputCallback);
+        LoggerWrite(g_LogFile, T_SPLIT, TRUE);
+    }
 }
 
 /*
@@ -336,7 +348,7 @@ VOID ListCOMFromRegistry(
 */
 VOID ListFusion(
     VOID
-    )
+)
 {
     HMODULE hModule;
     WCHAR   szPath[MAX_PATH * 2];
@@ -351,12 +363,20 @@ VOID ListFusion(
     }
 
     //scan Windows first
-    cuiPrintText(g_ConOut, TEXT("\n[UacView] Autoelevated applications in Windows directory\n"), TRUE, TRUE);
-    FusionScanDirectory(USER_SHARED_DATA->NtSystemRoot, (FUSIONCALLBACK)FusionOutputCallback);
-    LoggerWrite(g_LogFile, TEXT("================================================\n"), TRUE);
+    cuiPrintText(T_WINFILES_HEAD, TRUE);
+    LoggerWrite(g_LogFile, T_WINFILES_HEAD, TRUE);
+
+#ifdef _DEBUG
+    FusionScanDirectory(L"C:\\sxs", (OUTPUTCALLBACK)FusionOutputCallback);
+    return;
+#else
+    FusionScanDirectory(USER_SHARED_DATA->NtSystemRoot, (OUTPUTCALLBACK)FusionOutputCallback);
+    LoggerWrite(g_LogFile, T_SPLIT, TRUE);
 
     //scan program files next
-    cuiPrintText(g_ConOut, TEXT("\n[UacView] Autoelevated applications in Program Files directory\n"), TRUE, TRUE);
+    cuiPrintText(T_PFDIRFILES_HEAD, TRUE);
+    LoggerWrite(g_LogFile, T_PFDIRFILES_HEAD, TRUE);
+
     RtlSecureZeroMemory(szPath, sizeof(szPath));
     if (SUCCEEDED(SHGetFolderPath(NULL,
         CSIDL_PROGRAM_FILES,
@@ -364,9 +384,10 @@ VOID ListFusion(
         SHGFP_TYPE_CURRENT,
         (LPWSTR)&szPath)))
     {
-        FusionScanDirectory(szPath, (FUSIONCALLBACK)FusionOutputCallback);
+        FusionScanDirectory(szPath, (OUTPUTCALLBACK)FusionOutputCallback);
     }
-    LoggerWrite(g_LogFile, TEXT("================================================\n"), TRUE);
+    LoggerWrite(g_LogFile, T_SPLIT, TRUE);
+#endif
 }
 
 /*
@@ -379,18 +400,22 @@ VOID ListFusion(
 */
 VOID ListAppInfo(
     VOID
-    )
+)
 {
     WCHAR szFileName[MAX_PATH * 2];
 
-    cuiPrintText(g_ConOut, TEXT("\n[UacView] Appinfo data\n"), TRUE, TRUE);
+    cuiPrintText(T_APPINFO_HEAD, TRUE);
+    LoggerWrite(g_LogFile, T_APPINFO_HEAD, TRUE);
 
+#ifndef _DEBUG
     _strcpy(szFileName, USER_SHARED_DATA->NtSystemRoot);
     _strcat(szFileName, TEXT("\\system32\\appinfo.dll"));
+#else
+    _strcpy(szFileName, TEXT("C:\\appinfo\\18361.dll"));
+#endif
+    ScanAppInfo(szFileName, (OUTPUTCALLBACK)AppInfoDataOutputCallback);
 
-    ScanAppInfo(szFileName, (APPINFODATACALLBACK)AppInfoDataOutputCallback);
-
-    LoggerWrite(g_LogFile, TEXT("================================================\n"), TRUE);
+    LoggerWrite(g_LogFile, T_SPLIT, TRUE);
 }
 
 /*
@@ -408,55 +433,53 @@ VOID main()
 
     __security_init_cookie();
 
-    g_ConOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (g_ConOut != INVALID_HANDLE_VALUE) {
+    HeapSetInformation(GetProcessHeap(), HeapEnableTerminationOnCorruption, NULL, 0);
 
-        SetConsoleMode(g_ConOut, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_OUTPUT);
+    cuiInitialize(FALSE, NULL);
 
-        cuiPrintText(g_ConOut, T_PROGRAM_TITLE, TRUE, TRUE);
+    cuiPrintText(T_PROGRAM_TITLE, TRUE);
 
-        g_NtBuildNumber = 0;
-        supQueryNtBuildNumber(&g_NtBuildNumber);
+    g_NtBuildNumber = 0;
+    supQueryNtBuildNumber(&g_NtBuildNumber);
 
-        if (g_NtBuildNumber < YUUBARI_MIN_SUPPORTED_NT_BUILD) {
-            cuiPrintText(g_ConOut, TEXT("[UacView] Unsupported Windows version."), TRUE, TRUE);
-            ExitProcess(0);
-        }
-        if (g_NtBuildNumber > YUUBARI_MAX_SUPPORTED_NT_BUILD) {
-            cuiPrintText(g_ConOut, TEXT("\n[UacView] Not all features available for this build\n"), TRUE, TRUE);
-        }
-
-        RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-        GetCommandLineParam(GetCommandLine(), 1, (LPWSTR)&szBuffer, MAX_PATH * sizeof(WCHAR), &l);
-        if (_strcmpi(szBuffer, TEXT("/?")) == 0) {
-            MessageBox(GetDesktopWindow(), T_HELP, T_PROGRAM_NAME, MB_ICONINFORMATION);
-            ExitProcess(0);
-        }
-        else {
-            g_VerboseOutput = (_strcmpi(szBuffer, TEXT("/v")) == 0);
-        }
-
-        RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-        _strcpy(szBuffer, TEXT("uac"));
-        ultostr(g_NtBuildNumber, _strend(szBuffer));
-        _strcat(szBuffer, TEXT(".log"));
-
-        g_LogFile = LoggerCreate(szBuffer);
-        if (g_LogFile != INVALID_HANDLE_VALUE) {
-            cuiPrintText(g_ConOut, TEXT("Output will be logged to file"), TRUE, TRUE);
-            cuiPrintText(g_ConOut, szBuffer, TRUE, TRUE);
-        }
-
-#ifndef _DEBUG
-        ListBasicSettings();
-        ListCOMFromRegistry();
-        ListAppInfo();
-#endif
-        ListFusion();
-
-        if (g_LogFile != INVALID_HANDLE_VALUE)
-            CloseHandle(g_LogFile);
-
+    if (g_NtBuildNumber < YUUBARI_MIN_SUPPORTED_NT_BUILD) {
+        cuiPrintText(TEXT("[UacView] Unsupported Windows version."), TRUE);
+        ExitProcess(0);
     }
+    if (g_NtBuildNumber > YUUBARI_MAX_SUPPORTED_NT_BUILD) {
+        cuiPrintText(TEXT("\r\n[UacView] Not all features available for this build\r\n"), TRUE);
+    }
+
+    RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+    GetCommandLineParam(GetCommandLine(), 1, (LPWSTR)&szBuffer, MAX_PATH * sizeof(WCHAR), &l);
+    if (_strcmpi(szBuffer, TEXT("/?")) == 0) {
+        MessageBox(GetDesktopWindow(), T_HELP, T_PROGRAM_NAME, MB_ICONINFORMATION);
+        ExitProcess(0);
+    }
+    else {
+        g_VerboseOutput = (_strcmpi(szBuffer, TEXT("/v")) == 0);
+    }
+
+    RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+    _strcpy(szBuffer, TEXT("uac"));
+    ultostr(g_NtBuildNumber, _strend(szBuffer));
+    _strcat(szBuffer, TEXT(".log"));
+
+    g_LogFile = LoggerCreate(szBuffer);
+    if (g_LogFile != INVALID_HANDLE_VALUE) {
+        cuiPrintText(TEXT("Output will be logged to the file"), TRUE);
+        cuiPrintText(szBuffer, TRUE);
+    }
+
+//#ifndef _DEBUG
+    ListBasicSettings();
+    ListCOMFromRegistry();
+//#endif
+    ListAppInfo();
+    ListFusion();
+
+    if (g_LogFile != INVALID_HANDLE_VALUE)
+        CloseHandle(g_LogFile);
+
     ExitProcess(0);
 }

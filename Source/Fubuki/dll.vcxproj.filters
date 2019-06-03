@@ -16,7 +16,7 @@
     <Filter Include="minirtl">
       <UniqueIdentifier>{04ee0fac-8cb1-42ba-8211-a3b0023677db}</UniqueIdentifier>
     </Filter>
-    <Filter Include="utils">
+    <Filter Include="shared">
       <UniqueIdentifier>{b6d45a93-6c7a-43d2-bd7b-b1dad4bc1720}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -30,14 +30,32 @@
     <ClInclude Include="unbcl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Shared\_filename.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Shared\util.h">
-      <Filter>utils</Filter>
+      <Filter>shared</Filter>
     </ClInclude>
-    <ClInclude Include="..\Shared\lsa.h">
+    <ClInclude Include="..\Shared\windefend.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="fubuki.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\shared.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\_filename.h">
+      <Filter>minirtl</Filter>
+    </ClInclude>
+    <ClInclude Include="wbemcomn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="winmm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="uihacks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\cmdline.h">
+      <Filter>minirtl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -71,12 +89,27 @@
       <Filter>minirtl</Filter>
     </ClCompile>
     <ClCompile Include="..\Shared\util.c">
-      <Filter>utils</Filter>
+      <Filter>shared</Filter>
     </ClCompile>
     <ClCompile Include="..\Shared\_strncpy.c">
       <Filter>minirtl</Filter>
     </ClCompile>
     <ClCompile Include="..\Shared\_strstri.c">
+      <Filter>minirtl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared\u64tostr.c">
+      <Filter>minirtl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared\windefend.c">
+      <Filter>shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared\ultohex.c">
+      <Filter>minirtl</Filter>
+    </ClCompile>
+    <ClCompile Include="uihacks.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared\cmdline.c">
       <Filter>minirtl</Filter>
     </ClCompile>
   </ItemGroup>

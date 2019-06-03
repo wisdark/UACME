@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017
+*  (C) COPYRIGHT AUTHORS, 2017 - 2019
 *
 *  TITLE:       CONSTS.H
 *
-*  VERSION:     1.25
+*  VERSION:     1.40
 *
-*  DATE:        04 Oct 2017
+*  DATE:        19 Mar 2019
 *
 *  Global consts definition file.
 *
@@ -19,22 +19,33 @@
 #pragma once
 
 #define YUUBARI_MIN_SUPPORTED_NT_BUILD 7600
-#define YUUBARI_MAX_SUPPORTED_NT_BUILD 16299
+#define YUUBARI_MAX_SUPPORTED_NT_BUILD 18361
 
 #define T_UAC_COM_AUTOAPPROVAL_LIST    TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\UAC\\COMAutoApprovalList") //RS1+
 #define T_UAC_SETTINGS_KEY             TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System")
 #define T_UAC_PROMPT_BEHAVIOR          TEXT("ConsentPromptBehaviorAdmin")
 #define T_UAC_SECURE_DESKTOP           TEXT("PromptOnSecureDesktop")
 #define T_UAC_RESTRICTED_AUTOAPPROVE   TEXT("EnableRestrictedAutoApprove") //RS1+
-#define T_UAC_AUTOAPPROVEIC            TEXT("EnableAutoApproveIntegrityContinuity") //RS2+
+#define T_UAC_AUTOAPPROVEIC            TEXT("EnableAutoApproveIntegrityContinuity") //RS2+, AipAutoApproveHardeningPolicy
+#define T_UAC_AUTOAPPROVEMP            TEXT("AutoApproveMitigationPolicy") //RS2+, AipAutoApproveHardeningPolicy
+#define T_UAC_AUTOAPPROVEHARDCLAIMS    TEXT("AutoApproveHardeningClaims") //RS2+, AipMarkAutoApprovedToken(TokenSecurityAttributes)
+#define T_UAC_ENABLESECUREUIPATHS      TEXT("EnableSecureUIAPaths") //RS2+, Only elevate UIAccess applications that are installed in secure locations
 
 #define T_FLAG_ELEVATION_ENABLED       TEXT("ElevationEnabled")
 #define T_FLAG_VIRTUALIZATION_ENABLED  TEXT("VirtualizationEnabled")
 #define T_FLAG_INSTALLERDETECT_ENABLED TEXT("InstallerDetectEnabled")
 
 #define T_PROGRAM_NAME                 TEXT("Yuubari")
-#define T_PROGRAM_TITLE                TEXT("[UacView] UAC information gathering tool, v1.2.6 (04/10/2017)\n")
+#define T_PROGRAM_TITLE                TEXT("[UacView] UAC information gathering tool, v1.4.0 (Mar 19, 2019)\r\n")
 
-#define T_HELP	TEXT("Optional parameters to execute: \n\n\r\
-YUUBARI [/v] \n\n\r\
+#define T_HELP	TEXT("Optional parameters to execute: \r\n\n\
+YUUBARI [/v] \r\n\n\
   /v - produce verbose output.")
+
+#define T_SPLIT TEXT("================================================\r\n")
+#define T_BASIC_HEAD TEXT("\r\n[UacView] Basic UAC settings\r\n")
+#define T_COM_HEAD TEXT("\r\n[UacView] Autoelevated COM objects\r\n")
+#define T_COM_APPROVE_HEAD TEXT("\r\n[UacView] COMAutoApproval list\r\n")
+#define T_WINFILES_HEAD TEXT("\r\n[UacView] Autoelevated applications in Windows directory\r\n")
+#define T_PFDIRFILES_HEAD TEXT("\r\n[UacView] Autoelevated applications in Program Files directory\r\n")
+#define T_APPINFO_HEAD TEXT("\r\n[UacView] Appinfo data\r\n")

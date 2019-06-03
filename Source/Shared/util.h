@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017
+*  (C) COPYRIGHT AUTHORS, 2017 - 2019
 *
 *  TITLE:       UTIL.H
 *
-*  VERSION:     2.80
+*  VERSION:     3.17
 *
-*  DATE:        07 Sept 2017
+*  DATE:        19 Mar 2019
 *
 *  Global support routines header file shared between payload dlls.
 *
@@ -18,9 +18,15 @@
 *******************************************************************************/
 #pragma once
 
-typedef NTSTATUS(NTAPI *PENUMOBJECTSCALLBACK)(
-    POBJECT_DIRECTORY_INFORMATION Entry,
-    PVOID CallbackParam);
+typedef struct _UACME_PARAM_BLOCK {
+    ULONG Crc32;
+    ULONG SessionId;
+    ULONG AkagiFlag;
+    WCHAR szParameter[MAX_PATH + 1];
+    WCHAR szDesktop[MAX_PATH + 1];
+    WCHAR szWinstation[MAX_PATH + 1];
+    WCHAR szSignalObject[MAX_PATH + 1];
+} UACME_PARAM_BLOCK, *PUACME_PARAM_BLOCK;
 
 typedef BOOL(WINAPI* PFNCREATEPROCESSW)(
     LPCWSTR lpApplicationName,
@@ -41,33 +47,19 @@ typedef struct _OBJSCANPARAM {
 
 typedef struct _SXS_SEARCH_CONTEXT {
     LPWSTR DllName;
-    LPWSTR PartialPath;
+    LPWSTR SxsKey;
     LPWSTR FullDllPath;
 } SXS_SEARCH_CONTEXT, *PSXS_SEARCH_CONTEXT;
+
+VOID ucmPingBack(
+    VOID);
 
 BOOLEAN ucmPrivilegeEnabled(
     _In_ HANDLE hToken,
     _In_ ULONG Privilege);
 
-NTSTATUS ucmReadValue(
-    _In_ HANDLE hKey,
-    _In_ LPWSTR ValueName,
-    _In_ DWORD ValueType,
-    _Out_ PVOID *Buffer,
-    _Out_ ULONG *BufferSize);
-
 NTSTATUS ucmCreateSyncMutant(
     _Out_ PHANDLE phMutant);
-
-NTSTATUS NTAPI ucmEnumSystemObjects(
-    _In_opt_ LPWSTR pwszRootDirectory,
-    _In_opt_ HANDLE hRootDirectory,
-    _In_ PENUMOBJECTSCALLBACK CallbackProc,
-    _In_opt_ PVOID CallbackParam);
-
-NTSTATUS NTAPI ucmDetectObjectCallback(
-    _In_ POBJECT_DIRECTORY_INFORMATION Entry,
-    _In_ PVOID CallbackParam);
 
 LPVOID ucmLdrGetProcAddress(
     _In_ PCHAR ImageBase,
@@ -99,13 +91,6 @@ BOOL ucmLaunchPayload2(
     _In_opt_ LPWSTR pszPayload,
     _In_opt_ DWORD cbPayload);
 
-BOOL ucmReadParameters(
-    _Inout_ PWSTR *pszParamBuffer,
-    _Inout_ ULONG *cbParamBuffer,
-    _Inout_opt_ PDWORD pdwGlobalFlag,
-    _Inout_opt_ PDWORD pdwSessionId,
-    _In_ BOOL IsSystem);
-
 LPWSTR ucmQueryRuntimeInfo(
     _In_ BOOL ReturnData);
 
@@ -126,7 +111,29 @@ wchar_t *sxsFilePathNoSlash(
     _In_ const wchar_t *fname,
     _In_ wchar_t *fpath);
 
-VOID NTAPI sxsFindDllCallback(
-    _In_ PCLDR_DATA_TABLE_ENTRY DataTableEntry,
-    _In_ PVOID Context,
-    _In_ OUT BOOLEAN *StopEnumeration);
+BOOL sxsFindLoaderEntry(
+    _In_ PSXS_SEARCH_CONTEXT Context);
+
+HANDLE ucmOpenAkagiNamespace(
+    VOID);
+
+_Success_(return == TRUE)
+BOOL ucmReadSharedParameters(
+    _Out_ UACME_PARAM_BLOCK *SharedParameters);
+
+VOID ucmSetCompletion(
+    _In_ LPWSTR lpEvent);
+
+BOOL ucmGetProcessElevationType(
+    _In_opt_ HANDLE ProcessHandle,
+    _Out_ TOKEN_ELEVATION_TYPE *lpType);
+
+NTSTATUS ucmIsProcessElevated(
+    _In_ ULONG ProcessId,
+    _Out_ PBOOL Elevated);
+
+#ifdef _DEBUG
+#define ucmDbgMsg(Message)  OutputDebugString(Message)
+#else
+#define ucmDbgMsg(Message)  
+#endif

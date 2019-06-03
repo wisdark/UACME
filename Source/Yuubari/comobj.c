@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2017
+*  (C) COPYRIGHT AUTHORS, 2014 - 2019
 *
 *  TITLE:       COMOBJ.C
 *
-*  VERSION:     1.24
+*  VERSION:     1.40
 *
-*  DATE:        20 Mar 2017
+*  DATE:        19 Mar 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -23,7 +23,7 @@
 
 VOID CopScanRegistry(
     _In_ HKEY RootKey,
-    _In_ REGCALLBACK OutputCallback
+    _In_ OUTPUTCALLBACK OutputCallback
 );
 
 /*
@@ -38,7 +38,7 @@ VOID CopQuerySubKey(
     _In_ HKEY RootKey,
     _In_ LPWSTR lpKeyName,
     _In_ BOOL ElevationKey,
-    _In_ REGCALLBACK OutputCallback
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     BOOL    bCond = FALSE;
@@ -48,9 +48,6 @@ VOID CopQuerySubKey(
     LPWSTR  lpName = NULL, lpAppId = NULL, lpAppIdName = NULL, lpLocalizedString = NULL, t = NULL;
 
     UAC_REGISTRY_DATA Data;
-
-    if (OutputCallback == NULL)
-        return;
 
     //open each sub key
     lRet = RegOpenKeyEx(RootKey, lpKeyName, 0, KEY_READ, &hSubKey);
@@ -82,7 +79,7 @@ VOID CopQuerySubKey(
                 dwDataSize = 0;
                 t = supReadKeyString(RootKey, TEXT("LocalizedString"), &dwDataSize);
                 if (t) {
-                    lpLocalizedString = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)MAX_PATH * 2);
+                    lpLocalizedString = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)MAX_PATH * 2);
                     if (lpLocalizedString) {
                         SHLoadIndirectString(t, lpLocalizedString, MAX_PATH, NULL);
                     }
@@ -93,7 +90,7 @@ VOID CopQuerySubKey(
                 dwDataSize = 0;
                 t = supReadKeyString(RootKey, TEXT("AppId"), &dwDataSize);
                 if (t) {
-                    lpAppId = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)dwDataSize + 32);
+                    lpAppId = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)dwDataSize + 32);
                     if (lpAppId) {
                         _strcpy(lpAppId, TEXT("AppId\\"));
                         _strcat(lpAppId, t);
@@ -148,9 +145,9 @@ VOID CopQuerySubKey(
                     Data.LocalizedString = TEXT("undefined");
                 }
 
-                Data.Key = supQueryKeyName(RootKey, NULL);
+                Data.Key = (LPWSTR)supQueryKeyName(RootKey, NULL);
                 Data.DataType = UacCOMDataCommonType;
-                OutputCallback(&Data);
+                OutputCallback((PVOID)&Data);
 
                 if (Data.Key) {
                     HeapFree(GetProcessHeap(), 0, Data.Key);
@@ -185,7 +182,7 @@ VOID CopQuerySubKey(
 VOID CopEnumSubKey(
     _In_ HKEY hKey,
     _In_ DWORD dwKeyIndex,
-    _In_ REGCALLBACK OutputCallback
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     BOOL    bElevation = FALSE;
@@ -193,12 +190,9 @@ VOID CopEnumSubKey(
     DWORD   dwcbName = 0, cch;
     LPTSTR  lpKeyName = NULL;
 
-    if (OutputCallback == NULL)
-        return;
-
     do {
         dwcbName = 32 * 1024;
-        lpKeyName = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwcbName);
+        lpKeyName = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwcbName);
         if (lpKeyName == NULL)
             break;
 
@@ -238,16 +232,13 @@ VOID CopEnumSubKey(
 */
 VOID CopScanRegistry(
     _In_ HKEY RootKey,
-    _In_ REGCALLBACK OutputCallback
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     BOOL    bCond = FALSE;
     HKEY    hKey = NULL;
     LRESULT lRet;
     DWORD   dwcSubKeys = 0, i;
-
-    if (OutputCallback == NULL)
-        return;
 
     do {
         //open root key for enumeration
@@ -310,7 +301,7 @@ BOOL CopEnumInterfaces(
             __leave;
 
         cMaxLength = (DWORD)((cMaxLength + 1) * sizeof(WCHAR));
-        lpKeyName = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cMaxLength);
+        lpKeyName = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cMaxLength);
         if (lpKeyName == NULL)
             __leave;
 
@@ -351,7 +342,7 @@ BOOL CopEnumInterfaces(
 }
 
 /*
-* CopScanAutoApprovalList
+* CoScanAutoApprovalList
 *
 * Purpose:
 *
@@ -359,8 +350,8 @@ BOOL CopEnumInterfaces(
 * This key was added in RS1 specially for consent.exe comfort
 *
 */
-VOID CopScanAutoApprovalList(
-    _In_ REGCALLBACK OutputCallback
+VOID CoScanAutoApprovalList(
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     HKEY    hKey = NULL;
@@ -376,7 +367,7 @@ VOID CopScanAutoApprovalList(
     IUnknown *Interface = NULL;
     IUnknown *TestObject = NULL;
 
-    if (CoInitialize(NULL) != S_OK)
+    if (CoInitializeEx(NULL, COINIT_APARTMENTTHREADED) != S_OK)
         return;
 
     RtlSecureZeroMemory(&InterfaceList, sizeof(InterfaceList));
@@ -396,7 +387,7 @@ VOID CopScanAutoApprovalList(
             __leave;
 
         cMaxLength = (DWORD)((cMaxLength + 1) * sizeof(WCHAR));
-        lpValue = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cMaxLength);
+        lpValue = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cMaxLength);
         if (lpValue == NULL)
             __leave;
 
@@ -417,7 +408,7 @@ VOID CopScanAutoApprovalList(
                                 Data.Name = InterfaceList.List[j].szInterfaceName;
                                 Data.Clsid = clsid;
                                 Data.IID = InterfaceList.List[j].iid;
-                                OutputCallback((UAC_REGISTRY_DATA*)&Data);
+                                OutputCallback((PVOID)&Data);
                             }
                         }
                         Interface->lpVtbl->Release(Interface);
@@ -449,13 +440,10 @@ VOID CopScanAutoApprovalList(
 *
 */
 VOID CoListInformation(
-    _In_ REGCALLBACK OutputCallback
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
-    //
-    // AutoApproval COM list added since RS1.
-    //
-    if (g_VerboseOutput) CopScanAutoApprovalList(OutputCallback);
-
-    CopScanRegistry(HKEY_CLASSES_ROOT, OutputCallback);
+    if (OutputCallback) {
+        CopScanRegistry(HKEY_CLASSES_ROOT, OutputCallback);
+    }
 }

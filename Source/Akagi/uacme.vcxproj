@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -31,47 +31,46 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>uacme</RootNamespace>
     <ProjectName>Akagi</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseInternal|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseInternal|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -99,29 +98,29 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>.\output\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>.\output\$(Platform)\$(Configuration)\</IntDir>
-    <CodeAnalysisRuleSet>SecurityRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>.\output\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>.\output\$(Platform)\$(Configuration)\</IntDir>
-    <CodeAnalysisRuleSet>SecurityRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>.\output\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>.\output\$(Platform)\$(Configuration)\</IntDir>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>..\..\..\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Team Tools\Static Analysis Tools\Rule Sets\SecurityRules.ruleset</CodeAnalysisRuleSet>
     <TargetName>$(ProjectName)32</TargetName>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseInternal|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>.\output\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>.\output\$(Platform)\$(Configuration)\</IntDir>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>..\..\..\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Team Tools\Static Analysis Tools\Rule Sets\SecurityRules.ruleset</CodeAnalysisRuleSet>
     <TargetName>$(ProjectName)32</TargetName>
     <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
@@ -130,8 +129,8 @@
     <OutDir>.\output\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>.\output\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)64</TargetName>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <CodeAnalysisRuleSet>..\..\..\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Team Tools\Static Analysis Tools\Rule Sets\SecurityRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseInternal|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -152,13 +151,16 @@
       <SDLCheck>true</SDLCheck>
       <EnablePREfast>false</EnablePREfast>
       <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)</AdditionalIncludeDirectories>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <Version>6.1</Version>
       <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
     </Link>
     <ResourceCompile />
     <ResourceCompile>
@@ -179,13 +181,16 @@
       <SDLCheck>true</SDLCheck>
       <EnablePREfast>false</EnablePREfast>
       <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)</AdditionalIncludeDirectories>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <Version>6.1</Version>
       <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
     </Link>
     <ResourceCompile />
     <ResourceCompile />
@@ -209,10 +214,9 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CompileAs>CompileAsC</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnablePREfast>true</EnablePREfast>
+      <EnablePREfast>false</EnablePREfast>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <StringPooling>
-      </StringPooling>
+      <StringPooling>true</StringPooling>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -221,10 +225,12 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <SetChecksum>true</SetChecksum>
       <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
       <Version>6.1</Version>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
     </Link>
     <ResourceCompile />
     <ResourceCompile>
@@ -254,20 +260,22 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnablePREfast>true</EnablePREfast>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <StringPooling>
-      </StringPooling>
+      <StringPooling>true</StringPooling>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)</AdditionalIncludeDirectories>
+      <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <SetChecksum>true</SetChecksum>
       <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
       <Version>6.1</Version>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
     </Link>
     <ResourceCompile />
     <ResourceCompile>
@@ -286,7 +294,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
@@ -294,9 +302,8 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CompileAs>CompileAsC</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnablePREfast>true</EnablePREfast>
-      <StringPooling>
-      </StringPooling>
+      <EnablePREfast>false</EnablePREfast>
+      <StringPooling>true</StringPooling>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -305,10 +312,12 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <SetChecksum>true</SetChecksum>
       <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
       <Version>6.1</Version>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
     </Link>
     <ResourceCompile />
     <ResourceCompile />
@@ -328,7 +337,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
@@ -337,8 +346,7 @@
       <CompileAs>CompileAsC</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnablePREfast>true</EnablePREfast>
-      <StringPooling>
-      </StringPooling>
+      <StringPooling>true</StringPooling>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -347,10 +355,12 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <SetChecksum>true</SetChecksum>
       <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
       <Version>6.1</Version>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
     </Link>
     <ResourceCompile />
     <ResourceCompile />
@@ -369,8 +379,10 @@
     <ClCompile Include="..\Shared\ldr.c" />
     <ClCompile Include="..\Shared\strtoul.c" />
     <ClCompile Include="..\Shared\u64tohex.c" />
+    <ClCompile Include="..\Shared\u64tostr.c" />
     <ClCompile Include="..\Shared\ultohex.c" />
     <ClCompile Include="..\Shared\ultostr.c" />
+    <ClCompile Include="..\Shared\windefend.c" />
     <ClCompile Include="..\Shared\_filename.c" />
     <ClCompile Include="..\shared\_strcat.c" />
     <ClCompile Include="..\shared\_strcmp.c" />
@@ -388,50 +400,53 @@
     <ClCompile Include="compress.c" />
     <ClCompile Include="methods\api0cradle.c" />
     <ClCompile Include="methods\b33f.c" />
+    <ClCompile Include="methods\bytecode77.c" />
     <ClCompile Include="methods\carberp.c" />
     <ClCompile Include="methods\comet.c" />
+    <ClCompile Include="methods\deroko.c" />
+    <ClCompile Include="methods\dwells.c" />
     <ClCompile Include="methods\enigma0x3.c" />
     <ClCompile Include="methods\explife.c" />
     <ClCompile Include="methods\gootkit.c" />
     <ClCompile Include="methods\hakril.c" />
     <ClCompile Include="methods\hybrids.c" />
-    <ClCompile Include="methods\comfileop.c" />
+    <ClCompile Include="methods\comsup.c" />
     <ClCompile Include="methods\methods.c" />
     <ClCompile Include="methods\pitou.c" />
+    <ClCompile Include="methods\rinn.c" />
     <ClCompile Include="methods\sandworm.c" />
     <ClCompile Include="methods\simda.c" />
     <ClCompile Include="methods\tyranid.c" />
     <ClCompile Include="methods\wusa.c" />
-    <ClCompile Include="minhook\buffer.c" />
-    <ClCompile Include="minhook\hde\hde32.c" />
-    <ClCompile Include="minhook\hde\hde64.c" />
-    <ClCompile Include="minhook\hook.c" />
-    <ClCompile Include="minhook\trampoline.c" />
     <ClCompile Include="sup.c" />
     <ClCompile Include="tests\test.c" />
-    <ClCompile Include="windefend.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Shared\ldr.h" />
     <ClInclude Include="..\shared\minirtl.h" />
     <ClInclude Include="..\shared\rtltypes.h" />
+    <ClInclude Include="..\Shared\shared.h" />
+    <ClInclude Include="..\Shared\windefend.h" />
     <ClInclude Include="..\Shared\_filename.h" />
     <ClInclude Include="aic.h" />
     <ClInclude Include="compress.h" />
-    <ClInclude Include="consts.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="methods\dwells.h" />
+    <ClInclude Include="methods\elvint.h" />
+    <ClInclude Include="methods\rinn.h" />
+    <ClInclude Include="secrets.h" />
     <ClInclude Include="makecab.h" />
-    <ClInclude Include="manifest.h" />
+    <ClInclude Include="encresource.h" />
     <ClInclude Include="methods\api0cradle.h" />
     <ClInclude Include="methods\apphelp.h" />
     <ClInclude Include="methods\b33f.h" />
+    <ClInclude Include="methods\bytecode77.h" />
     <ClInclude Include="methods\carberp.h" />
-    <ClInclude Include="methods\cdproxy.h" />
     <ClInclude Include="methods\comet.h" />
-    <ClInclude Include="methods\comfileop.h" />
+    <ClInclude Include="methods\comsup.h" />
+    <ClInclude Include="methods\deroko.h" />
     <ClInclude Include="methods\enigma0x3.h" />
     <ClInclude Include="methods\explife.h" />
-    <ClInclude Include="methods\fwcpllua.h" />
     <ClInclude Include="methods\gootkit.h" />
     <ClInclude Include="methods\hakril.h" />
     <ClInclude Include="methods\hybrids.h" />
@@ -439,21 +454,11 @@
     <ClInclude Include="methods\pitou.h" />
     <ClInclude Include="methods\sandworm.h" />
     <ClInclude Include="methods\simda.h" />
-    <ClInclude Include="methods\sirefef.h" />
     <ClInclude Include="methods\tyranid.h" />
     <ClInclude Include="methods\wusa.h" />
-    <ClInclude Include="minhook\buffer.h" />
-    <ClInclude Include="minhook\hde\hde32.h" />
-    <ClInclude Include="minhook\hde\hde64.h" />
-    <ClInclude Include="minhook\hde\pstdint.h" />
-    <ClInclude Include="minhook\hde\table32.h" />
-    <ClInclude Include="minhook\hde\table64.h" />
-    <ClInclude Include="minhook\MinHook.h" />
-    <ClInclude Include="minhook\trampoline.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="sup.h" />
     <ClInclude Include="tests\test.h" />
-    <ClInclude Include="windefend.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="bin32res.rc">
@@ -476,6 +481,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="akagi.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="export.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

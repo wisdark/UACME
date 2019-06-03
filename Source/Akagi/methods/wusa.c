@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017
+*  (C) COPYRIGHT AUTHORS, 2017 - 2018
 *
 *  TITLE:       WUSA.C
 *
-*  VERSION:     2.75
+*  VERSION:     3.11
 *
-*  DATE:        30 June 2017
+*  DATE:        23 Nov 2018
 *
 *  Windows Update Standalone Installer (WUSA) based routines.
 *
@@ -41,7 +41,7 @@ BOOL ucmWusaExtractPackage(
         return FALSE;
 
     RtlSecureZeroMemory(szMsuFileName, sizeof(szMsuFileName));
-    _strcpy(szMsuFileName, g_ctx.szTempDirectory);
+    _strcpy(szMsuFileName, g_ctx->szTempDirectory);
     _strcat(szMsuFileName, ELLOCNAK_MSU);
 
     Size = ((1 + _strlen(lpTargetDirectory) +
@@ -97,7 +97,7 @@ BOOL ucmCreateCabinetForSingleFile(
 
         //build cabinet
         RtlSecureZeroMemory(szMsuFileName, sizeof(szMsuFileName));
-        _strcpy(szMsuFileName, g_ctx.szTempDirectory);
+        _strcpy(szMsuFileName, g_ctx->szTempDirectory);
         _strcat(szMsuFileName, ELLOCNAK_MSU);
 
         Cabinet = cabCreate(szMsuFileName);
@@ -136,7 +136,7 @@ VOID ucmWusaCabinetCleanup(
     WCHAR    szMsuFileName[MAX_PATH * 2];
 
     RtlSecureZeroMemory(szMsuFileName, sizeof(szMsuFileName));
-    _strcpy(szMsuFileName, g_ctx.szTempDirectory);
+    _strcpy(szMsuFileName, g_ctx->szTempDirectory);
     _strcat(szMsuFileName, ELLOCNAK_MSU);
     DeleteFile(szMsuFileName);
 }
@@ -164,12 +164,12 @@ DWORD ucmxInvokeWusaThread(
 
     RtlSecureZeroMemory(&shinfo, sizeof(shinfo));
 
-    _strcpy(szProcess, g_ctx.szSystemDirectory);
+    _strcpy(szProcess, g_ctx->szSystemDirectory);
     _strcat(szProcess, WUSA_EXE);
 
     RtlSecureZeroMemory(szParameters, sizeof(szParameters));
     _strcpy(szParameters, TEXT(" /quiet "));
-    _strcat(szParameters, g_ctx.szTempDirectory);
+    _strcat(szParameters, g_ctx->szTempDirectory);
     _strcat(szParameters, ELLOCNAK_MSU);
 
     shinfo.cbSize = sizeof(shinfo);
@@ -239,12 +239,11 @@ DWORD ucmxDirectoryWatchdogThread(
         szBuffer[1] = L'?';
         szBuffer[2] = L'?';
         szBuffer[3] = L'\\';
-        _strncpy(&szBuffer[4], MAX_PATH, g_ctx.szSystemDirectory, 3);
+        _strncpy(&szBuffer[4], MAX_PATH, g_ctx->szSystemDirectory, 3);
 
         //
         // Open directory for change notification.
         //
-        usWatchDirectory.Buffer = NULL;
         RtlInitUnicodeString(&usWatchDirectory, szBuffer);
         InitializeObjectAttributes(&ObjectAttributes, &usWatchDirectory, OBJ_CASE_INSENSITIVE, 0, NULL);
 
@@ -294,7 +293,7 @@ DWORD ucmxDirectoryWatchdogThread(
                     memIO = pInfo->FileNameLength +
                         ((1 + _strlen(szBuffer)) * sizeof(WCHAR));
 
-                    CapturedDirectoryName = supHeapAlloc(memIO);
+                    CapturedDirectoryName = (LPWSTR)supHeapAlloc(memIO);
 
                     if (CapturedDirectoryName) {
                         _strcpy(CapturedDirectoryName, szBuffer);
@@ -304,7 +303,6 @@ DWORD ucmxDirectoryWatchdogThread(
                         //
                         // Open new directory to set reparse point.
                         //
-                        usReparseDirectory.Buffer = NULL;
                         RtlInitUnicodeString(&usReparseDirectory, CapturedDirectoryName);
                         InitializeObjectAttributes(&ObjectAttributes, &usReparseDirectory, OBJ_CASE_INSENSITIVE, NULL, NULL);
                         status = NtCreateFile(&hReparseDirectory, 
@@ -398,24 +396,8 @@ BOOL ucmWusaExtractViaJunction(
 )
 {
     BOOL bCond = FALSE;
-
-#ifndef _DEBUG
-    HANDLE                      hExplorer = NULL;
-#endif
-
     HANDLE hWatchdogThread, hWusaThread;
     DWORD ti;
-
-    //
-    // Query explorer.exe handle and use it to suspend process.
-    // Thus blocking unwanted user changes during work.
-    //
-#ifndef _DEBUG
-    hExplorer = supGetExplorerHandle();
-    if (hExplorer != NULL) {
-        NtSuspendProcess(hExplorer);
-    }
-#endif
 
     do {
 
@@ -443,13 +425,6 @@ BOOL ucmWusaExtractViaJunction(
         CloseHandle(hWatchdogThread);
 
     } while (bCond);
-
-#ifndef _DEBUG
-    if (hExplorer != NULL) {
-        NtResumeProcess(hExplorer);
-        NtClose(hExplorer);
-    }
-#endif
 
     return (g_ThreadFinished == 1);
 }

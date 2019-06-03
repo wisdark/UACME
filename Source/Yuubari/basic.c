@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2017
+*  (C) COPYRIGHT AUTHORS, 2014 - 2019
 *
 *  TITLE:       BASIC.C
 *
-*  VERSION:     1.11
+*  VERSION:     1.40
 *
-*  DATE:        27 Feb 2017
+*  DATE:        19 Mar 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -25,7 +25,7 @@
 *
 */
 VOID ScanBasicUacData(
-    BASICDATACALLBACK OutputCallback
+    OUTPUTCALLBACK OutputCallback
 )
 {
     ULONG       Flags = 0;
@@ -37,24 +37,25 @@ VOID ScanBasicUacData(
     if (OutputCallback == NULL)
         return;
 
-    RtlQueryElevationFlags(&Flags);
+    if (!NT_SUCCESS(RtlQueryElevationFlags(&Flags)))
+        return;
 
     RtlSecureZeroMemory(&Data, sizeof(Data));
 
     Data.Name = T_FLAG_ELEVATION_ENABLED;
     Data.IsValueBool = TRUE;
     Data.Value = ((Flags & DBG_FLAG_ELEVATION_ENABLED) > 0);
-    OutputCallback(&Data);
+    OutputCallback((PVOID)&Data);
 
     Data.Name = T_FLAG_VIRTUALIZATION_ENABLED;
     Data.IsValueBool = TRUE;
     Data.Value = ((Flags & DBG_FLAG_VIRTUALIZATION_ENABLED) > 0);
-    OutputCallback(&Data);
+    OutputCallback((PVOID)&Data);
 
     Data.Name = T_FLAG_INSTALLERDETECT_ENABLED;
     Data.IsValueBool = TRUE;
     Data.Value = ((Flags & DBG_FLAG_INSTALLER_DETECT_ENABLED) > 0);
-    OutputCallback(&Data);
+    OutputCallback((PVOID)&Data);
 
     lRet = RegOpenKeyEx(HKEY_LOCAL_MACHINE, T_UAC_SETTINGS_KEY, 0, KEY_READ, &hKey);
     if (lRet == ERROR_SUCCESS) {
@@ -63,22 +64,42 @@ VOID ScanBasicUacData(
         lRet = supRegReadDword(hKey, T_UAC_PROMPT_BEHAVIOR, &Data.Value);
         if (lRet == ERROR_SUCCESS) {
             Data.Name = T_UAC_PROMPT_BEHAVIOR;
-            OutputCallback(&Data);
+            OutputCallback((PVOID)&Data);
         }
 
         Data.Value = 0;
-        Data.IsValueBool = FALSE;
         lRet = supRegReadDword(hKey, T_UAC_RESTRICTED_AUTOAPPROVE, &Data.Value);
         if (lRet == ERROR_SUCCESS) {
             Data.Name = T_UAC_RESTRICTED_AUTOAPPROVE;
-            OutputCallback(&Data);
+            OutputCallback((PVOID)&Data);
         }
 
         Data.Value = 0;
         lRet = supRegReadDword(hKey, T_UAC_AUTOAPPROVEIC, &Data.Value);
         if (lRet == ERROR_SUCCESS) {
             Data.Name = T_UAC_AUTOAPPROVEIC;
-            OutputCallback(&Data);
+            OutputCallback((PVOID)&Data);
+        }
+
+        Data.Value = 0;
+        lRet = supRegReadDword(hKey, T_UAC_AUTOAPPROVEMP, &Data.Value);
+        if (lRet == ERROR_SUCCESS) {
+            Data.Name = T_UAC_AUTOAPPROVEMP;
+            OutputCallback((PVOID)&Data);
+        }
+
+        Data.Value = 0;
+        lRet = supRegReadDword(hKey, T_UAC_AUTOAPPROVEHARDCLAIMS, &Data.Value);
+        if (lRet == ERROR_SUCCESS) {
+            Data.Name = T_UAC_AUTOAPPROVEHARDCLAIMS;
+            OutputCallback((PVOID)&Data);
+        }
+
+        Data.Value = 0;
+        lRet = supRegReadDword(hKey, T_UAC_ENABLESECUREUIPATHS, &Data.Value);
+        if (lRet == ERROR_SUCCESS) {
+            Data.Name = T_UAC_ENABLESECUREUIPATHS;
+            OutputCallback((PVOID)&Data);
         }
 
         Data.Value = 0;
@@ -86,7 +107,7 @@ VOID ScanBasicUacData(
         if (lRet == ERROR_SUCCESS) {
             Data.Name = T_UAC_SECURE_DESKTOP;
             Data.IsValueBool = TRUE;
-            OutputCallback(&Data);
+            OutputCallback((PVOID)&Data);
         }
 
         RegCloseKey(hKey);
