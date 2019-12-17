@@ -4,9 +4,9 @@
 *
 *  TITLE:       CONSTS.H
 *
-*  VERSION:     3.19
+*  VERSION:     3.22
 *
-*  DATE:        22 May 2019
+*  DATE:        07 Nov 2019
 *
 *  Global consts definition file.
 *
@@ -24,13 +24,33 @@
 #define AKAGI_XOR_KEY               'naka'
 #define AKAGI_XOR_KEY2              ' pta'
 
+//"Usage: Akagi.exe [Method] [OptionalParamToExecute]"
+#define IDSB_USAGE_HELP               0
+
+//"Admin account with limited token required."
+#define IDSB_USAGE_ADMIN_REQUIRED     1
+
+//"Please enable UAC for this account."
+#define IDSB_USAGE_UAC_REQUIRED       2
+
+#define UCM_VERSION_MAJOR       3
+#define UCM_VERSION_MINOR       2
+#define UCM_VERSION_REVISION    2
+#define UCM_VERSION_BUILD       1911
+#define UCM_IS_VNEXT            FALSE
+
 #pragma region PYSH
-#define T_USAGE_HELP                L"Usage: Akagi.exe [Method] [OptionalParamToExecute]"
-#define PROGRAMTITLE_VERSION        L"UACMe v 3.1.9.1905"
+#define PROGRAM_SHORTNAME           L"UACMe"
 #define WOW64STRING                 L"Wow64 detected, use x64 version of this tool."
 #define WOW64WIN32ONLY              L"This method only works with x86-32 Windows or from Wow64"
 #define UACFIX                      L"This method fixed/unavailable in the current version of Windows, do you still want to continue?"
+#define T_SIMDA_UAC                 L"UAC is now disabled.\nYou must reboot your computer for the changes to take effect."
+#define T_SIMDA_CONSENT_WARNING     L"This method will permanently TURN UAC OFF, are you sure?"
+#define T_SXS_CONSENT_WARNING       L"WARNING: This method will affect UAC interface, are you sure?"
+#define T_PICK_EXE_QUESTION         L"Would you like to use this method with ComputerDefaults.exe (YES) or Fodhelper.exe (NO)?"
 #pragma endregion
+
+#define KAMIKAZE_MARKER             "https"
 
 #define T_MACHINE                   L"MACHINE\\"
 
@@ -43,6 +63,7 @@
 #define T_DISPLAY_CALIBRATION       L"Software\\Microsoft\\Windows NT\\CurrentVersion\\ICM\\Calibration"
 #define T_DOTNET_CLIENT             L"Software\\Microsoft\\Windows NT\\CurrentVersion\\KnownFunctionTableDlls"
 #define T_UNINSTALL                 L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
+#define T_DOTNET_FULL               L"Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full"
 
 #define T_MSC_SHELL                 L"Software\\Classes\\mscfile"
 #define T_EXEFILE_SHELL             L"Software\\Classes\\exefile"
@@ -93,7 +114,8 @@
 #define FUJINAMI_DLL                    L"Fujinami.dll"
 #define HIBIKI_DLL                      L"Hibiki.dll"
 #define KUMA_DLL                        L"lzx32.dll"
-#define KAMIKAZE_MSC                    L"kmkze.msc" 
+#define KAMIKAZE_MSC                    L"kmkze.msc"
+#define KAMIKAZE_LAUNCHER               L"readme.html"
 #define FUBUKI_EXE                      L"Fubuki.exe"
 #define FUBUKI_EXT_ENTRYPOINT           "_FubukiProc1"
 #define FUBUKI_WND_HOOKPROC             "_FubukiProc2"
@@ -144,6 +166,7 @@
 #define BITLOCKERWIZARDELEV_EXE     L"BitlockerWizardElev.exe"
 #define CMD_EXE                     L"cmd.exe"
 #define CLICONFG_EXE                L"cliconfg.exe"
+#define CLIPUP_EXE                  L"Clipup.exe"
 #define COMPMGMTLAUNCHER_EXE        L"CompMgmtLauncher.exe"
 #define COMPUTERDEFAULTS_EXE        L"computerdefaults.exe"
 #define CONSENT_EXE                 L"consent.exe"
@@ -235,7 +258,7 @@
 #define MYSTERIOUSCUTETHING         L"pe386"
 #define SOMEOTHERNAME               L"huy32"
 
-#define T_KUREND                    L"KureND"
+#define T_KUREND                    L"DNeruK"
 #define T_SYMLINK                   L"\\Software\\KureND"
 #pragma endregion
 
@@ -289,6 +312,7 @@
 #define T_CLSID_SPPLUAObject                 L"{179CC917-3A82-40E7-9F8C-2FC8A3D2212B}"
 #define T_CLSID_UninstallStringLauncher      L"{FCC74B77-EC3E-4DD8-A80B-008A702075A9}"
 #define T_CLSID_AcCplAdmin                   L"{434A6274-C539-4E99-88FC-44206D942775}"
+#define T_CLSID_EditionUpgradeManager        L"{17CCA47D-DAE5-4E4A-AC42-CC54E28F334A}"
 
 #ifdef _KUMA_CONTAINER_MODE
 
@@ -301,6 +325,7 @@
 #define T_IID_SPPLUAObject                   L"{12FBFECB-7CCE-473E-8737-78EE6C9CCAEB}"
 #define T_IID_IARPUninstallStringLauncher    L"{F885120E-3789-4FD9-865E-DC9B4A6412D2}"
 #define T_IID_IAcCplAdmin                    L"{97B9F488-B188-4B03-9B27-D74B25755464}"
+#define T_IID_IEditionUpgradeManager         L"{F2DCB80D-0670-44BC-9002-CD18688730AF}"
 
 #endif //_KUMA_CONTAINER_MODE
 

@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.H
 *
-*  VERSION:     3.19
+*  VERSION:     3.22
 *
-*  DATE:        22 May 2019
+*  DATE:        07 Nov 2019
 *
 *  Common header file for the program support routines.
 *
@@ -89,6 +89,12 @@ BOOL supWriteBufferToFile(
     _In_ LPWSTR lpFileName,
     _In_ PVOID Buffer,
     _In_ DWORD BufferSize);
+
+BOOL supWriteBufferToFile2(
+    _In_ LPWSTR lpFileName,
+    _In_ PVOID Buffer,
+    _In_ DWORD BufferSize,
+    _In_ BOOLEAN AppendFile);
 
 BOOL supDecodeAndWriteBufferToFile(
     _In_ LPWSTR lpFileName,
@@ -242,9 +248,6 @@ BOOL supDesktopToName(
     _In_ DWORD cbBuffer,
     _Out_ PDWORD BytesNeeded);
 
-BOOL supQueryNtBuildNumber(
-    _Inout_ PULONG BuildNumber);
-
 BOOL supReplaceDllEntryPoint(
     _In_ PVOID DllImage,
     _In_ ULONG SizeOfDllImage,
@@ -335,6 +338,9 @@ BOOLEAN supIndirectRegAdd(
     _In_opt_ WCHAR* pszValue,
     _In_opt_ WCHAR* pszDataType,
     _In_ WCHAR* pszData);
+
+BOOLEAN supIsNetfx48PlusInstalled(
+    VOID);
 
 #ifdef _DEBUG
 #define supDbgMsg(Message)  OutputDebugString(Message)

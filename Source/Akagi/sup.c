@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.C
 *
-*  VERSION:     3.19
+*  VERSION:     3.22
 *
-*  DATE:        22 May 2019
+*  DATE:        07 Nov 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -431,6 +431,57 @@ BOOL supWriteBufferToFile(
         GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
 
     if (hFile != INVALID_HANDLE_VALUE) {
+        WriteFile(hFile, Buffer, BufferSize, &bytesIO, NULL);
+        CloseHandle(hFile);
+    }
+    else {
+#ifdef _DEBUG
+        supDebugPrint(TEXT("CreateFile"), GetLastError());
+#endif
+        return FALSE;
+    }
+
+    return (bytesIO == BufferSize);
+}
+
+/*
+* supWriteBufferToFile2
+*
+* Purpose:
+*
+* Create new file or open existing and write/append buffer to it.
+*
+*/
+BOOL supWriteBufferToFile2(
+    _In_ LPWSTR lpFileName,
+    _In_ PVOID Buffer,
+    _In_ DWORD BufferSize,
+    _In_ BOOLEAN AppendFile
+)
+{
+    HANDLE hFile;
+    DWORD bytesIO = 0;
+    DWORD dwFlags;
+    LARGE_INTEGER ilMove;
+
+    if ((Buffer == NULL) || (BufferSize == 0))
+        return FALSE;
+
+    if (AppendFile)
+        dwFlags = OPEN_EXISTING;
+    else
+        dwFlags = CREATE_ALWAYS;
+
+    hFile = CreateFile(lpFileName,
+        GENERIC_WRITE, 0, NULL, dwFlags , 0, NULL);
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+
+        if (AppendFile) {
+            ilMove.QuadPart = 0;
+            SetFilePointerEx(hFile, ilMove, NULL, FILE_END);
+        }
+
         WriteFile(hFile, Buffer, BufferSize, &bytesIO, NULL);
         CloseHandle(hFile);
     }
@@ -1170,6 +1221,28 @@ BOOLEAN supSetCheckSumForMappedFile(
 }
 
 /*
+* ucmxBuildVersionString
+*
+* Purpose:
+*
+* Combine version numbers into string.
+*
+*/
+VOID ucmxBuildVersionString(
+    _In_ WCHAR *pszVersion)
+{
+    wsprintf(pszVersion, TEXT("%s v %lu.%lu.%lu.%lu"),
+        PROGRAM_SHORTNAME,
+        UCM_VERSION_MAJOR,
+        UCM_VERSION_MINOR,
+        UCM_VERSION_REVISION,
+        UCM_VERSION_BUILD);
+
+    if (UCM_IS_VNEXT)
+        _strcat(pszVersion, TEXT(" QW"));
+}
+
+/*
 * ucmShowMessage
 *
 * Purpose:
@@ -1182,14 +1255,18 @@ VOID ucmShowMessage(
     _In_ LPWSTR lpszMsg
 )
 {
+    WCHAR szVersion[100];
+
     if (OutputToDebugger) {
         OutputDebugString(lpszMsg);
         OutputDebugString(TEXT("\r\n"));
     }
     else {
+        szVersion[0] = 0;
+        ucmxBuildVersionString(szVersion);
         MessageBoxW(GetDesktopWindow(),
             lpszMsg,
-            PROGRAMTITLE_VERSION,
+            szVersion,
             MB_ICONINFORMATION);
     }
 }
@@ -1206,9 +1283,13 @@ INT ucmShowQuestion(
     _In_ LPWSTR lpszMsg
 )
 {
+    WCHAR szVersion[100];
+
+    szVersion[0] = 0;
+    ucmxBuildVersionString(szVersion);
     return MessageBoxW(GetDesktopWindow(), 
         lpszMsg, 
-        PROGRAMTITLE_VERSION, 
+        szVersion, 
         MB_YESNO);
 }
 
@@ -1758,8 +1839,10 @@ BOOL supSetEnvVariable(
 
     } while (bCond);
 
-    if (hKey != NULL)
+    if (hKey != NULL) {
+        RegFlushKey(hKey);
         RegCloseKey(hKey);
+    }
 
     return bResult;
 }
@@ -1992,43 +2075,6 @@ BOOL supDesktopToName(
         lpBuffer,
         cbBuffer,
         BytesNeeded);
-}
-
-/*
-* supQueryNtBuildNumber
-*
-* Purpose:
-*
-* Query NtBuildNumber value from ntoskrnl image.
-*
-*/
-BOOL supQueryNtBuildNumber(
-    _Inout_ PULONG BuildNumber
-)
-{
-    BOOL bResult = FALSE;
-    HMODULE hModule;
-    PVOID Ptr;
-    WCHAR szBuffer[MAX_PATH * 2];
-
-    RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
-    _strcpy(szBuffer, USER_SHARED_DATA->NtSystemRoot);
-    _strcat(szBuffer, L"\\system32\\ntoskrnl.exe");
-
-    hModule = LoadLibraryEx(szBuffer, NULL, DONT_RESOLVE_DLL_REFERENCES);
-    if (hModule == NULL)
-        return bResult;
-
-#pragma warning(push)
-#pragma warning(disable: 4054)//code to data
-    Ptr = (PVOID)GetProcAddress(hModule, "NtBuildNumber");
-#pragma warning(pop)
-    if (Ptr) {
-        *BuildNumber = (*(PULONG)Ptr & 0xffff);
-        bResult = TRUE;
-    }
-    FreeLibrary(hModule);
-    return bResult;
 }
 
 /*
@@ -2951,12 +2997,9 @@ PVOID supCreateUacmeContext(
         osv.dwOSVersionInfoSize = sizeof(osv);
         RtlGetVersion((PRTL_OSVERSIONINFOW)&osv);
         NtBuildNumber = osv.dwBuildNumber;
-
     }
     else {
-        if (!supQueryNtBuildNumber(&NtBuildNumber)) {
-            return NULL;
-        }
+        NtBuildNumber = USER_SHARED_DATA->NtBuildNumber;
     }
 
     if (NtBuildNumber < 7000) {
@@ -3228,4 +3271,28 @@ BOOLEAN supIndirectRegAdd(
     supHeapFree(pszBuffer);
 
     return bResult;
+}
+
+/*
+* supIsNetfx48PlusInstalled
+*
+* Purpose:
+*
+* Detect Netfx 4.8+
+*
+*/
+BOOLEAN supIsNetfx48PlusInstalled(
+    VOID)
+{
+    HKEY hKey = NULL;
+    DWORD Netfx48ReleaseVersion = 528040;
+    DWORD dwReleaseVersion = 0;
+    DWORD cbData = sizeof(DWORD), dwType = REG_DWORD;
+
+    if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, T_DOTNET_FULL, 0, KEY_READ, &hKey)) {
+        RegQueryValueEx(hKey, TEXT("Release"), NULL, &dwType, (LPBYTE)&dwReleaseVersion, &cbData);
+        RegCloseKey(hKey);
+    }
+
+    return (dwReleaseVersion >= Netfx48ReleaseVersion);
 }

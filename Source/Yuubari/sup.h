@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.H
 *
-*  VERSION:     1.40
+*  VERSION:     1.46
 *
-*  DATE:        19 Mar 2019
+*  DATE:        23 Oct 2019
 *
 *  Common header file for the program support routines.
 *
@@ -19,37 +19,27 @@
 #pragma once
 
 BOOL supIsCorImageFile(
-    PVOID ImageBase
-    );
+    PVOID ImageBase);
 
 LPWSTR supReadKeyString(
     HKEY hKey,
     LPWSTR KeyValue,
-    PDWORD pdwDataSize
-    );
+    PDWORD pdwDataSize);
 
 PVOID supQueryKeyName(
     _In_ HKEY hKey,
-    _Out_opt_ PSIZE_T ReturnedLength
-    );
+    _Out_opt_ PSIZE_T ReturnedLength);
 
 BOOLEAN supIsProcess32bit(
-    _In_ HANDLE hProcess
-    );
+    _In_ HANDLE hProcess);
 
 PVOID supFindPattern(
-    CONST PBYTE Buffer,
-    SIZE_T BufferSize,
-    CONST PBYTE Pattern,
-    SIZE_T PatternSize
-    );
+    _In_ CONST PBYTE Buffer,
+    _In_ SIZE_T BufferSize,
+    _In_ CONST PBYTE Pattern,
+    _In_ SIZE_T PatternSize);
 
 LRESULT supRegReadDword(
     _In_ HKEY hKey,
     _In_ LPWSTR lpValueName,
-    _In_ LPDWORD Value
-    );
-
-BOOL supQueryNtBuildNumber(
-    _Inout_ PULONG BuildNumber
-    );
+    _In_ LPDWORD Value);

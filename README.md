@@ -338,7 +338,7 @@ Keys (watch debug output with dbgview or similar for more info):
      * Type: Race condition
      * Method: NTFS reparse point & Dll Hijack
      * Target(s): wusa.exe
-     * Component(s): dcomcnfg.exe, mmc.exe, ole32.dll, MsCoree.dll
+     * Component(s): Attacker defined
      * Implementation: ucmJunctionMethod
      * Works from: Windows 7 (7600)
      * Fixed in: unfixed :see_no_evil:
@@ -503,8 +503,8 @@ Keys (watch debug output with dbgview or similar for more info):
      * Component(s): \AppData\Local\Microsoft\WindowsApps\srrstr.dll
      * Implementation: ucmEgre55Method
      * Works from: Windows 10 (14393)
-     * Fixed in: unfixed :see_no_evil:
-        * How: -
+     * Fixed in: Windows 10 19H1 (18362)
+        * How: SysDm.cpl!_CreateSystemRestorePage has been updated for secured load library call
 55. Author: James Forshaw
      * Type: GUI Hack 
      * Method: UIPI bypass with token modification
@@ -531,7 +531,16 @@ Keys (watch debug output with dbgview or similar for more info):
      * Implementation: ucmStandardAutoElevation
      * Works from: Windows 7 (7600)
      * Fixed in: Windows 8.1 (9600)
-        * How: sysprep.exe hardened LoadFrom manifest elements			
+        * How: sysprep.exe hardened LoadFrom manifest elements
+58. Author: RinN
+     * Type: Elevated COM interface
+     * Method: IEditionUpgradeManager
+     * Target(s): \system32\clipup.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmEditionUpgradeManagerMethod
+     * Works from: Windows 10 (14393)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -		
 
 Note:
 * Method (6) unavailable in wow64 environment starting from Windows 8;
@@ -541,7 +550,6 @@ Note:
 * Method (26) is still working, however it main advantage was UAC bypass on AlwaysNotify level. Since 15031 it is gone;
 * Method (30) require x64 because it abuses WOW64 subsystem feature;
 * Method (35) AlwaysNotify compatible as there always will be running autoelevated apps or user will have to launch them anyway;
-* Method (38) require internet connection as it executes remote script located at github.com/hfiref0x/Beacon/blob/master/uac/exec.html;
 * Method (55) is not really reliable (as any GUI hacks) and included just for fun.
 
 Run examples:
@@ -551,19 +559,19 @@ Run examples:
 * akagi64 3 c:\windows\system32\charmap.exe
 
 # Warning
-* This tool shows ONLY popular UAC bypass method used by malware, and reimplement some of them in a different way improving original concepts. There are exists different, not yet known to general public methods, be aware of this;  
+* This tool shows ONLY popular UAC bypass method used by malware, and reimplement some of them in a different way improving original concepts. There are different, not yet known to the general public, methods. Be aware of this;  
 * Using (5) method will permanently turn off UAC (after reboot), make sure to do this in test environment or don't forget to re-enable UAC after tool usage;
-* Using (5), (9) methods will permanently compromise security of target keys (UAC Settings key for (5) and IFEO for (9)), if you do tests on your real machine - restore keys security manually after you complete this tool usage;
-* This tool is not intended for AV tests and not tested to work in aggressive AV environment, if you still plan to use it with installed bloatware AV soft - you use it at your own risk;
+* Using (5), (9) methods will permanently compromise security of target keys (UAC Settings key for (5) and IFEO for (9)). If you do tests on your real machine - restore keys security manually after you complete this tool usage;
+* This tool is not intended for AV tests and not tested to work in aggressive AV environment, if you still plan to use it with installed bloatware AV soft - use it at your own risk;
 * Some AV may flag this tool as HackTool, MSE/WinDefender constantly marks it as malware, nope;
 * If you run this program on real computer remember to remove all program leftovers after usage, for more info about files it drops to system folders see source code;
 * Most of methods created for x64, with no x86-32 support in mind. I don't see any sense in supporting 32 bit versions of Windows or wow64, however with small tweaks most of them will run under wow64 as well.
 
-If you wondering why this still exist and work here is the explanation, an official Microsoft WHITEFLAG (including totally incompetent statements as bonus)
+If you wondering why this still exists and working - here is the explanation - an official Microsoft WHITEFLAG (including totally incompetent statements as bonus)
 https://blogs.msdn.microsoft.com/oldnewthing/20160816-00/?p=94105
 
 # Windows 10 support and testing policy
-* EOL'ed versions of Windows 10 are not supported and therefore not tested (at moment of writing EOL'ed Windows 10 versions are: TH1 (10240), TH2 (10586));
+* EOL'ed versions of Windows 10 are not supported and therefore not tested (at moment of writing EOL'ed Windows 10 versions are: TH1 (10240), TH2 (10586)), RS2 (15063), RS3 (16299);
 * Insider builds are not supported as methods may be fixed there.
 
 # Protection
@@ -581,6 +589,14 @@ https://blogs.msdn.microsoft.com/oldnewthing/20160816-00/?p=94105
 
 * UACMe comes with full source code, written in C with some parts written in C#;
 * In order to build from source you need Microsoft Visual Studio 2013/2015 U2 and later versions.
+
+# Compiled Binaries
+
+* They are not provided since 2.8.9 and will never be provided in future. Coupe of reasons why not and why you should not provide them too to the general public:
+   * If you look at this project in a nutshell it is a HackTool, despite initial goal to be a demonstrator. Of course several AV's detects it as HackTool (MS WD for example), however most of VirusTotal patients detects it as generic "malware". Which is of course incorrect, however unfortunately some lazy malware writters blindly copy-paste code to their crapware (or even simple use this tool directly) thus some AV created signatures based on project code parts;
+   * By giving compiled binaries to everyone you make life of script-kiddies much easier because having need to compile from source works as perfect barrier for exceptionaliy dumb script-kiddies and "button-clickers";
+   * Having compiled binaries in the repository will ultimately lead to flagging this repository pages as malicious (due to above reasons) by various content filters (SmartScreen, Google Safe Browsing etc).
+* This decision is a final and won't be changed.
 
 ## Instructions
 
@@ -601,7 +617,7 @@ https://blogs.msdn.microsoft.com/oldnewthing/20160816-00/?p=94105
 * Malicious Application Compatibility Shims, https://www.blackhat.com/docs/eu-15/materials/eu-15-Pierce-Defending-Against-Malicious-Application-Compatibility-Shims-wp.pdf
 * Junfeng Zhang from WinSxS dev team blog, https://blogs.msdn.microsoft.com/junfeng/
 * Beyond good ol' Run key, series of articles, http://www.hexacorn.com/blog
-* KernelMode.Info UACMe thread, http://www.kernelmode.info/forum/viewtopic.php?f=11&t=3643
+* KernelMode.Info UACMe thread, https://www.kernelmode.info/forum/viewtopicf985.html?f=11&t=3643
 * Command Injection/Elevation - Environment Variables Revisited, https://breakingmalware.com/vulnerabilities/command-injection-and-elevation-environment-variables-revisited
 * "Fileless" UAC Bypass Using eventvwr.exe and Registry Hijacking, https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/
 * Bypassing UAC on Windows 10 using Disk Cleanup, https://enigma0x3.net/2016/07/22/bypassing-uac-on-windows-10-using-disk-cleanup/

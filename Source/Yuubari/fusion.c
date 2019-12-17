@@ -4,9 +4,9 @@
 *
 *  TITLE:       FUSION.C
 *
-*  VERSION:     1.40
+*  VERSION:     1.44
 *
-*  DATE:        19 Mar 2019
+*  DATE:        19 Oct 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -17,6 +17,39 @@
 #include "global.h"
 
 ptrWTGetSignatureInfo WTGetSignatureInfo = NULL;
+
+/*
+* IsExemptedAutoApproveEXE
+*
+* Purpose:
+*
+* Check if the given file is Exempted AutoApprove EXE.
+*
+*/
+BOOLEAN IsExemptedAutoApproveEXE(
+    _In_ LPWSTR lpFileName,
+    _In_ HANDLE hFile)
+{
+    SIGNATURE_INFO sigData;
+    NTSTATUS status;
+
+    LPWSTR lpName = _filename(lpFileName);
+
+    if ((_strcmpi(lpName, L"sysprep.exe") == 0) ||
+        (_strcmpi(lpName, L"inetmgr.exe") == 0))
+    {
+        RtlSecureZeroMemory(&sigData, sizeof(sigData));
+        sigData.cbSize = sizeof(sigData);
+        status = WTGetSignatureInfo(lpFileName, hFile,
+            SIF_BASE_VERIFICATION | SIF_CHECK_OS_BINARY | SIF_CATALOG_SIGNED,
+            &sigData,
+            NULL, NULL);
+        if (NT_SUCCESS(status))
+            return ((sigData.SignatureState == SIGNATURE_STATE_VALID) && (sigData.fOSBinary != FALSE));
+    }
+
+    return FALSE;
+}
 
 /*
 * SxsGetTocHeaderFromActivationContext
@@ -32,7 +65,6 @@ NTSTATUS SxsGetTocHeaderFromActivationContext(
     _Out_opt_ PACTIVATION_CONTEXT_DATA *ActivationContextData
 )
 {
-    BOOL bCond = FALSE;
     NTSTATUS result = STATUS_UNSUCCESSFUL;
     ACTIVATION_CONTEXT_DATA *ContextData = NULL;
     ACTIVATION_CONTEXT_DATA_TOC_HEADER *Header;
@@ -97,7 +129,7 @@ NTSTATUS SxsGetTocHeaderFromActivationContext(
 
             result = STATUS_SUCCESS;
 
-        } while (bCond);
+        } while (FALSE);
 
         if (!NT_SUCCESS(result)) {
             OutputDebugString(szLog);
@@ -178,7 +210,6 @@ NTSTATUS SxsGetDllRedirectionFromActivationContext(
     _In_ PDLL_REDIRECTION_LIST DllList
 )
 {
-    BOOL bCond = FALSE;
     ULONG i, j;
     NTSTATUS result = STATUS_UNSUCCESSFUL, status;
     ACTIVATION_CONTEXT_DATA *ContextData = NULL;
@@ -244,7 +275,7 @@ NTSTATUS SxsGetDllRedirectionFromActivationContext(
             else
                 result = STATUS_SUCCESS;
 
-        } while (bCond);
+        } while (FALSE);
 
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -317,7 +348,6 @@ VOID FusionCheckFile(
     OUTPUTCALLBACK OutputCallback
 )
 {
-    BOOL                bCond = FALSE;
     DWORD               lastError;
     NTSTATUS            status;
     HANDLE              hFile = NULL, hSection = NULL, hActCtx = NULL;
@@ -540,6 +570,14 @@ VOID FusionCheckFile(
                     FusionCommonData.AutoElevateState = AutoElevateDisabled;
         }
         else {
+
+            //
+            // Check specific "exempted" autoelevated files, they may not have "autoelevate" in manifest.
+            //
+            if (IsExemptedAutoApproveEXE(FileName, hFile)) {
+                FusionCommonData.AutoElevateState = AutoElevateExempted;
+            }
+
             //
             // Query settings failed, check if it known error like sxs key not exist.         
             //
@@ -569,7 +607,7 @@ VOID FusionCheckFile(
         FusionProbeForRedirectedDlls(FileName, (PACTIVATION_CONTEXT)hActCtx, OutputCallback);
 
 
-    } while (bCond);
+    } while (FALSE);
 
     if (hActCtx != NULL)
         ReleaseActCtx(hActCtx);
