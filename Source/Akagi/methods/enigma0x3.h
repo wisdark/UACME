@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2016 - 2019
+*  (C) COPYRIGHT AUTHORS, 2016 - 2020
 *
 *  TITLE:       ENIGMA0X3.H
 *
-*  VERSION:     3.17
+*  VERSION:     3.26
 *
-*  DATE:        18 Mar 2019
+*  DATE:        23 May 2020
 *
 *  Prototypes and definitions for Enigma0x3 autoelevation method.
 *
@@ -43,12 +43,17 @@ NTSTATUS ucmSdcltIsolatedCommandMethod(
     _In_ LPWSTR lpszPayload);
 
 NTSTATUS ucmMsSettingsDelegateExecuteMethod(
-    _In_ LPWSTR lpszPayload);
+    _In_ LPWSTR lpszPayload,
+    _In_ LPWSTR lpszTargetApp);
 
 NTSTATUS ucmShellDelegateExecuteCommandMethod(
+    _In_ UCM_METHOD Method,
     _In_ LPWSTR lpTargetApp,
     _In_ SIZE_T cchTargetApp,
     _In_ LPWSTR lpTargetKey,
     _In_ SIZE_T cchTargetKey,
     _In_ LPWSTR lpPayload,
     _In_ SIZE_T cchPayload);
+
+NTSTATUS ucmGluptebaMethod(
+    _In_ LPWSTR lpszPayload);

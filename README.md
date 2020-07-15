@@ -308,7 +308,7 @@ Keys (watch debug output with dbgview or similar for more info):
 33. Author: winscripting.blog
      * Type: Shell API 
      * Method: Registry key manipulation
-     * Target(s): \system32\fodhelper.exe, \system32\computerdefaults.exe
+     * Target(s): \system32\fodhelper.exe
      * Component(s): Attacker defined
      * Implementation: ucmMsSettingsDelegateExecuteMethod
      * Works from: Windows 10 TH1 (10240)
@@ -373,7 +373,7 @@ Keys (watch debug output with dbgview or similar for more info):
 40. Author: Ruben Boonen
      * Type: COM Handler Hijack
      * Method: Registry key manipulation
-     * Target(s): \system32\mmc.exe, \System32\recdisc.exe
+     * Target(s): \system32\mmc.exe, \system32\recdisc.exe
      * Component(s): Attacker defined
      * Implementation: ucmCOMHandlersMethod
      * Works from: Windows 7 (7600)
@@ -549,7 +549,34 @@ Keys (watch debug output with dbgview or similar for more info):
      * Implementation: ucmDebugObjectMethod
      * Works from: Windows 7 (7600)
      * Fixed in: unfixed :see_no_evil:
+        * How: -
+60. Author: Enigma0x3 derivative by WinNT/Glupteba
+     * Type: Shell API
+     * Method: Registry key manipulation
+     * Target(s): \system32\CompMgmtLauncher.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmGluptebaMethod
+     * Works from: Windows 7 (7600)
+     * Fixed in: Windows 10 RS2 (15063)
+        * How: CompMgmtLauncher.exe autoelevation removed
+61. Author: Enigma0x3/bytecode77 derivative by Nassim Asrir
+     * Type: Shell API
+     * Method: Registry key manipulation
+     * Target(s): \system32\slui.exe, \system32\changepk.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmShellDelegateExecuteCommandMethod
+     * Works from: Windows 10 (14393)
+     * Fixed in: unfixed :see_no_evil:
         * How: -		
+62. Author: winscripting.blog
+     * Type: Shell API 
+     * Method: Registry key manipulation
+     * Target(s): \system32\computerdefaults.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmMsSettingsDelegateExecuteMethod
+     * Works from: Windows 10 RS4 (17134)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
 
 Note:
 * Method (6) unavailable in wow64 environment starting from Windows 8;
@@ -649,6 +676,7 @@ https://blogs.msdn.microsoft.com/oldnewthing/20160816-00/?p=94105
 * Accessing Access Tokens for UIAccess, https://tyranidslair.blogspot.com/2019/02/accessing-access-tokens-for-uiaccess.html
 * Fileless UAC Bypass in Windows Store Binary, https://www.activecyber.us/1/post/2019/03/windows-uac-bypass.html
 * Calling Local Windows RPC Servers from .NET, https://googleprojectzero.blogspot.com/2019/12/calling-local-windows-rpc-servers-from.html
+* Microsoft Windows 10 UAC bypass local privilege escalation exploit, https://packetstormsecurity.com/files/155927/Microsoft-Windows-10-Local-Privilege-Escalation.html
 
 # Authors
 

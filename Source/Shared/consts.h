@@ -4,9 +4,9 @@
 *
 *  TITLE:       CONSTS.H
 *
-*  VERSION:     3.23
+*  VERSION:     3.26
 *
-*  DATE:        17 Nov 2019
+*  DATE:        26 May 2020
 *
 *  Global consts definition file.
 *
@@ -35,8 +35,8 @@
 
 #define UCM_VERSION_MAJOR       3
 #define UCM_VERSION_MINOR       2
-#define UCM_VERSION_REVISION    3
-#define UCM_VERSION_BUILD       1912
+#define UCM_VERSION_REVISION    6
+#define UCM_VERSION_BUILD       2005
 #define UCM_IS_VNEXT            FALSE
 
 #pragma region PYSH
@@ -47,7 +47,6 @@
 #define T_SIMDA_UAC                 L"UAC is now disabled.\nYou must reboot your computer for the changes to take effect."
 #define T_SIMDA_CONSENT_WARNING     L"This method will permanently TURN UAC OFF, are you sure?"
 #define T_SXS_CONSENT_WARNING       L"WARNING: This method will affect UAC interface, are you sure?"
-#define T_PICK_EXE_QUESTION         L"Would you like to use this method with ComputerDefaults.exe (YES) or Fodhelper.exe (NO)?"
 #pragma endregion
 
 #define KAMIKAZE_MARKER             "https"
@@ -72,6 +71,7 @@
 #define T_MSSETTINGS                L"Software\\Classes\\ms-settings"
 #define T_CLASSESFOLDER             L"Software\\Classes\\Folder"
 #define T_APPXPACKAGE               L"Software\\Classes\\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2"
+#define T_LAUNCHERSYSTEMSETTINGS    L"Software\\Classes\\Launcher.SystemSettings"
 #define T_SHELL_OPEN_COMMAND        L"\\shell\\open\\command"
 #define T_SHELL_RUNAS_COMMAND       L"\\shell\\runas\\command"
 
@@ -107,6 +107,8 @@
 #define AKAGI_COMPLETION_EVENT      L"AkagiCompletionEvent" //PYSH
 
 #define SIGNAL_OBJECT               L"\\BaseNamedObjects\\CZ2128" //PYSH
+
+#define RUN_CMD_COMMAND             L" /c start " //PYSH
 
 //
 // Unit names and entrypoints.
