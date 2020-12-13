@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2019
+*  (C) COPYRIGHT AUTHORS, 2014 - 2020
 *
 *  TITLE:       FUSION.C
 *
-*  VERSION:     1.44
+*  VERSION:     1.49
 *
-*  DATE:        19 Oct 2019
+*  DATE:        11 Nov 2020
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -343,9 +343,9 @@ NTSTATUS FusionProbeForRedirectedDlls(
 *
 */
 VOID FusionCheckFile(
-    LPWSTR lpDirectory,
-    WIN32_FIND_DATA *fdata,
-    OUTPUTCALLBACK OutputCallback
+    _In_ LPWSTR lpDirectory,
+    _In_ WIN32_FIND_DATA *fdata,
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     DWORD               lastError;
@@ -637,8 +637,8 @@ VOID FusionCheckFile(
 *
 */
 VOID FusionScanFiles(
-    LPWSTR lpDirectory,
-    OUTPUTCALLBACK OutputCallback
+    _In_ LPWSTR lpDirectory,
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     HANDLE hFile;
@@ -673,8 +673,8 @@ VOID FusionScanFiles(
 *
 */
 VOID FusionScanDirectory(
-    LPWSTR lpDirectory,
-    OUTPUTCALLBACK OutputCallback
+    _In_ LPWSTR lpDirectory,
+    _In_ OUTPUTCALLBACK OutputCallback
 )
 {
     SIZE_T              l;
@@ -703,7 +703,6 @@ VOID FusionScanDirectory(
     _strcpy(textbuf, dirbuf);
     textbuf[l] = L'*';
     textbuf[l + 1] = 0;
-    l++;
 
     RtlSecureZeroMemory(&fdata, sizeof(fdata));
     hDirectory = FindFirstFile(textbuf, &fdata);
