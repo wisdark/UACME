@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2015 - 2020
+*  (C) COPYRIGHT AUTHORS, 2015 - 2021
 *
 *  TITLE:       CONSTS.H
 *
-*  VERSION:     3.53
+*  VERSION:     3.56
 *
-*  DATE:        07 Nov 2020
+*  DATE:        30 July 2021
 *
 *  Global consts definition file.
 *
@@ -50,8 +50,8 @@
 
 #define UCM_VERSION_MAJOR       3
 #define UCM_VERSION_MINOR       5
-#define UCM_VERSION_REVISION    3
-#define UCM_VERSION_BUILD       2011
+#define UCM_VERSION_REVISION    6
+#define UCM_VERSION_BUILD       2107
 #define UCM_IS_VNEXT            TRUE
 
 #define SUPRUNPROCESS_TIMEOUT_DEFAULT 12000
@@ -61,11 +61,23 @@
 //
 #define UACME_SHARED_BASE_ID        'sTlA'
 
+//
+// WORD sized id list.
+//
 #define AKAGI_COMPLETION_EVENT_ID   'ab'
 #define AKAGI_SHARED_SECTION_ID     'cd'
 #define AKAGI_BDESCRIPTOR_NAME_ID   'ef'
 #define FUBUKI_SYNC_MUTEX_ID        'a1'
+#define FUBUKI_PCA_SECTION_ID       '0f'
+#define FUBUKI_PCA_EVENT_ID         '1f'
 
+#define FUBUKI_PCA_PAYLOAD_RUN      (0x1)
+#define FUBUKI_PCA_LOADER_RUN       (0x2)
+#define FUBUKI_PCA_ALL_RUN          (FUBUKI_PCA_PAYLOAD_RUN | FUBUKI_PCA_LOADER_RUN)
+
+//
+// Kamikaze consts
+//
 #define KAMIKAZE_MARKER             "https"
 #define WF_MSC                      L"wf.msc"
 
@@ -78,11 +90,21 @@
 #define T_DISPLAY_CALIBRATION       L"Software\\Microsoft\\Windows NT\\CurrentVersion\\ICM\\Calibration"
 #define T_DOTNET_CLIENT             L"Software\\Microsoft\\Windows NT\\CurrentVersion\\KnownFunctionTableDlls"
 #define T_DOTNET_FULL               L"Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full"
+#define T_PCA_STORE                 L"Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store"
+#define T_APPCOMPAT_LAYERS          L"Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
+#define T_PCA_PERSISTED             L"Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted"
 
 #define T_MSSETTINGS                L"ms-settings"
+#define T_MSWINDOWSSTORE            L"ms-windows-store"
 #define T_CLASSESFOLDER             L"Folder"
 #define T_APPXPACKAGE               L"AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2"
 #define T_LAUNCHERSYSTEMSETTINGS    L"Launcher.SystemSettings"
+
+#define ELLOCNAK_MSU                L"update.msu"
+#define RUN_CMD_COMMAND             L" /c start "
+
+#define T_APPXSVC                   L"AppXSvc"
+#define T_PCASVC                    L"PcaSvc"
 
 #pragma endregion
 
@@ -90,18 +112,18 @@
 
 #define T_SHELL_OPEN                L"\\shell\\open"
 #define T_SHELL_COMMAND             L"command"
+#define T_URL_PROTOCOL              L"URL Protocol"
+
+#define T_URL_MS_WIN_STORE          L"URL:ms-windows-store"
 
 #define T_SDDL_ALL_FOR_EVERYONE     L"D:(A;;GA;;;WD)"
 #define T_WINDIR                    L"windir"
+#define T_SYSTEMROOT                L"systemroot"
 #define T_WINDOWSMEDIAPLAYER        L"Windows Media Player"
 
 #define T_DELEGATEEXECUTE           L"DelegateExecute"
 
 #define T_PROTO_HTTP                L"http"
-
-#define ELLOCNAK_MSU                L"update.msu" //PYSH
-
-#define RUN_CMD_COMMAND             L" /c start " //PYSH
 
 //
 // Unit names and entrypoints
@@ -115,6 +137,8 @@
 #define FUBUKI_DEFAULT_ENTRYPOINT       "MpScanStart"
 #define FUBUKI_ENTRYPOINT_UIACCESS2     "MpScanControl"
 #define FUBUKI_ENTRYPOINT_SXS           "MpThreatOpen"
+#define FUBUKI_ENTRYPOINT_PCAEXE        "MpManagerStatusQuery"
+#define FUBUKI_ENTRYPOINT_PCADLL        "MpManagerStatusQueryEx"
 #pragma endregion
 
 //
@@ -130,6 +154,7 @@
 #define MSCOREE_DLL                 L"MSCOREE.DLL"
 #define OLE32_DLL                   L"ole32.dll"
 #define OSKSUPPORT_DLL              L"OskSupport.dll"
+#define PCADM_DLL                   L"pcadm.dll"
 #define SHELL32_DLL                 L"shell32.dll"
 #define WINMM_DLL                   L"winmm.dll"
 #define WOW64LOG_DLL                L"wow64log.dll"
@@ -245,3 +270,10 @@
 // Moniker(s)
 //
 #define T_ELEVATION_MONIKER_ADMIN            L"Elevation:Administrator!new:"
+
+
+//
+// RPC interface UUID
+//
+#define APPINFO_RPC                         TEXT("201ef99a-7fa0-444c-9399-19ba84f12a1a")
+#define PCASVC_RPC                          TEXT("0767a036-0d22-48aa-ba69-b619480f38cb")

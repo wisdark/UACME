@@ -665,7 +665,7 @@ First parameter is number of method to use, second is optional command (executab
 65. Author: Arush Agarampur
      * Type: Elevated COM interface 
      * Method: IWscAdmin
-     * Target(s): Shell protocol registry entry
+     * Target(s): Shell Protocol Hijack
      * Component(s): Attacker defined
      * Implementation: ucmWscActionProtocolMethod
      * Works from: Windows 7 (7600)
@@ -674,7 +674,7 @@ First parameter is number of method to use, second is optional command (executab
       * Code status: added in v3.5.2
 66. Author: Arush Agarampur
      * Type: Elevated COM interface 
-     * Method: IFwCplLua
+     * Method: IFwCplLua, Shell Protocol Hijack
      * Target(s): Shell protocol registry entry and environment variables
      * Component(s): Attacker defined
      * Implementation: ucmFwCplLuaMethod2
@@ -682,11 +682,42 @@ First parameter is number of method to use, second is optional command (executab
      * Fixed in: unfixed :see_no_evil:
         * How: -
       * Code status: added in v3.5.3
+67. Author: Arush Agarampur
+     * Type: Shell API
+     * Method: Shell Protocol Hijack
+     * Target(s): \system32\fodhelper.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmMsSettingsProtocolMethod
+     * Works from: Windows 10 TH1 (10240)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+      * Code status: added in v3.5.4
+68. Author: Arush Agarampur
+     * Type: Shell API
+     * Method: Shell Protocol Hijack
+     * Target(s): \system32\wsreset.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmMsStoreProtocolMethod
+     * Works from: Windows 10 RS5 (17763)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+      * Code status: added in v3.5.5
+69. Author: Arush Agarampur
+     * Type: Shell API
+     * Method: Environment variables expansion, Dll Hijack
+     * Target(s): \system32\taskhostw.exe
+     * Component(s): pcadm.dll
+     * Implementation: ucmPcaMethod
+     * Works from: Windows 7 (7600)
+     * AlwaysNotify compatible
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+      * Code status: added in v3.5.6
 
 </details>
 
 Note:
-* Method (30) (63) (64) (65) implemented only in x64 version;
+* Method (30) (63) and later implemented only in x64 version;
 * Method (30) require x64 because it abuses WOW64 subsystem feature;
 * Method (55) is not really reliable (as any GUI hacks) and included just for fun.
 
@@ -790,6 +821,6 @@ https://devblogs.microsoft.com/oldnewthing/20160816-00/?p=94105
 
 # Authors
 
-(c) 2014 - 2020 UACMe Project
+(c) 2014 - 2021 UACMe Project
 
-[![HitCount](http://hits.dwyl.io/hfiref0x/uacme.svg)](http://hits.dwyl.io/hfiref0x/uacme)
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fhfiref0x%2FUACME&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)

