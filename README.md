@@ -375,7 +375,7 @@ First parameter is number of method to use, second is optional command (executab
 36. Author: Thomas Vanhoutte aka SandboxEscaper
      * Type: Race condition
      * Method: NTFS reparse point & Dll Hijack
-     * Target(s): wusa.exe
+     * Target(s): wusa.exe, pkgmgr.exe
      * Component(s): Attacker defined
      * Implementation: ucmJunctionMethod
      * Works from: Windows 7 (7600)
@@ -577,11 +577,11 @@ First parameter is number of method to use, second is optional command (executab
      * Method: Registry key manipulation
      * Target(s): \system32\WSReset.exe
      * Component(s): Attacker defined
-     * Implementation: ucmShellRegModMethod
+     * Implementation: ucmShellRegModMethod2
      * Works from: Windows 10 (17134)
-     * Fixed in: unfixed :see_no_evil:
-        * How: -
-      * Code status: added in v3.1.7
+     * Fixed in: Windows 11 (22000)
+        * How: Windows components redesign
+      * Code status: removed starting from v3.5.7 :tractor:
 57. Author: Leo Davidson derivative by Win32/Gapz
      * Type: Dll Hijack
      * Method: IFileOperation
@@ -713,6 +713,36 @@ First parameter is number of method to use, second is optional command (executab
      * Fixed in: unfixed :see_no_evil:
         * How: -
       * Code status: added in v3.5.6
+70. Author: V3ded
+     * Type: Shell API
+     * Method: Registry key manipulation
+     * Target(s): \system32\fodhelper.exe, \system32\computerdefaults.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmShellRegModMethod3
+     * Works from: Windows 10 (10240)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+      * Code status: added in v3.5.7
+71. Author: Arush Agarampur
+     * Type: Dll Hijack 
+     * Method: ISecurityEditor
+     * Target(s): Native Image Cache elements
+     * Component(s): Attacker defined
+     * Implementation: ucmNICPoisonMethod2
+     * Works from: Windows 7 RTM (7600)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+      * Code status: added in v3.5.8
+72. Author: Emeric Nasi
+     * Type: Dll Hijack 
+     * Method: Dll path search abuse
+     * Target(s): \syswow64\msdt.exe, \system32\sdiagnhost.exe
+     * Component(s): BluetoothDiagnosticUtil.dll
+     * Implementation: ucmMsdtMethod
+     * Works from: Windows 10 (10240)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+      * Code status: added in v3.5.9
 
 </details>
 
@@ -768,16 +798,14 @@ https://devblogs.microsoft.com/oldnewthing/20160816-00/?p=94105
 ## Instructions
 
 * Select Platform ToolSet first for project in solution you want to build (Project->Properties->General): 
-  * v120 for Visual Studio 2013;
   * v140 for Visual Studio 2015; 
   * v141 for Visual Studio 2017;
   * v142 for Visual Studio 2019.
 * For v140 and above set Target Platform Version (Project->Properties->General):
   * If v140 then select 8.1 (Note that Windows 8.1 SDK must be installed);
-  * If v141/v142 then select 10 (Note that Windows 10 SDK must be installed). 
+  * If v141/v142 then select 10 (Note that Windows 10 (19041) SDK must be installed). 
 
 * To build working binary:
-  * Undefine KUMA_STUB
   * Compile payload units
   * Compile Naka module
   * Encrypt all payload units using Naka module
@@ -785,8 +813,6 @@ https://devblogs.microsoft.com/oldnewthing/20160816-00/?p=94105
   * Move compiled units and secret blobs to the Akagi\Bin directory
   * Rebuild Akagi
   
-* Can be built with SDK 8.1 and later versions.
-
 # References
 
 * Windows 7 UAC whitelist, http://www.pretentiousname.com/misc/win7_uac_whitelist2.html
@@ -818,9 +844,11 @@ https://devblogs.microsoft.com/oldnewthing/20160816-00/?p=94105
 * Microsoft Windows 10 UAC bypass local privilege escalation exploit, https://packetstormsecurity.com/files/155927/Microsoft-Windows-10-Local-Privilege-Escalation.html
 * UACMe 3.5, WD and the ways of mitigation, https://swapcontext.blogspot.com/2020/10/uacme-35-wd-and-ways-of-mitigation.html
 * UAC bypasses from COMAutoApprovalList, https://swapcontext.blogspot.com/2020/11/uac-bypasses-from-comautoapprovallist.html
+* Utilizing Programmatic Identifiers (ProgIDs) for UAC Bypasses, https://v3ded.github.io/redteam/utilizing-programmatic-identifiers-progids-for-uac-bypasses
+* MSDT DLL Hijack UAC bypass, https://blog.sevagas.com/?MSDT-DLL-Hijack-UAC-bypass
 
 # Authors
 
-(c) 2014 - 2021 UACMe Project
+(c) 2014 - 2022 UACMe Project
 
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fhfiref0x%2FUACME&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)

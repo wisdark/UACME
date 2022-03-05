@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.H
 *
-*  VERSION:     3.56
+*  VERSION:     3.58
 *
-*  DATE:        30 July 2021
+*  DATE:        01 Dec 2021
 *
 *  Common header file for the program support routines.
 *
@@ -107,52 +107,6 @@ typedef struct _REPARSE_DATA_BUFFER {
 
 #define REPARSE_DATA_BUFFER_HEADER_LENGTH FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer.DataBuffer)
 
-//
-// Fusion CLI metadata structures
-//
-typedef struct _STORAGESIGNATURE {
-    ULONG lSignature;               // "Magic" signature.
-    USHORT iMajorVer;               // Major file version.
-    USHORT iMinorVer;               // Minor file version.
-    ULONG iExtraData;               // Offset to next structure of information 
-    ULONG iVersionString;           // Length of version string
-    BYTE pVersion[ANYSIZE_ARRAY];   // Version string
-} STORAGESIGNATURE, *PSTORAGESIGNATURE;
-
-typedef struct _STORAGEHEADER {
-    BYTE fFlags; // STGHDR_xxx flags.
-    BYTE pad;
-    USHORT iStreams; // How many streams are there.
-} STORAGEHEADER, *PSTORAGEHEADER;
-
-#define MAXSTREAMNAME 32
-
-typedef struct _STORAGESTREAM {
-    ULONG iOffset;                // Offset in file for this stream.
-    ULONG iSize;                  // Size of the file.
-    CHAR  rcName[MAXSTREAMNAME];
-} STORAGESTREAM, * PSTORAGESTREAM;
-
-//
-// Fusion metadata end
-//
-
-//
-// Assembly cache scan routine and definitions.
-//
-typedef HRESULT(WINAPI* pfnCreateAssemblyCache)(
-    _Out_ IAssemblyCache** ppAsmCache,
-    _In_  DWORD            dwReserved);
-
-typedef struct _FUSION_SCAN_PARAM {
-    _In_ GUID *ReferenceMVID;
-    _Out_ LPWSTR lpFileName;
-} FUSION_SCAN_PARAM, * PFUSION_SCAN_PARAM;
-
-typedef BOOL(CALLBACK* pfnFusionScanFilesCallback)(
-    LPWSTR CurrentDirectory,
-    WIN32_FIND_DATA* FindData,
-    PVOID UserContext);
 
 //
 // Memory allocator flags.
@@ -174,7 +128,7 @@ BOOL supGetElevationType(
     _Out_ TOKEN_ELEVATION_TYPE *lpType);
 
 BOOL supWriteBufferToFile(
-    _In_ LPWSTR lpFileName,
+    _In_ LPCWSTR lpFileName,
     _In_opt_ PVOID Buffer,
     _In_ DWORD BufferSize);
 
@@ -185,19 +139,19 @@ BOOL supDecodeAndWriteBufferToFile(
     _In_ ULONG Key);
 
 PBYTE supReadFileToBuffer(
-    _In_ LPWSTR lpFileName,
+    _In_ LPCWSTR lpFileName,
     _Inout_opt_ LPDWORD lpBufferSize);
 
 BOOL supRunProcess2(
-    _In_ LPWSTR lpszProcessName,
-    _In_opt_ LPWSTR lpszParameters,
-    _In_opt_ LPWSTR lpVerb,
+    _In_ LPCWSTR lpFile,
+    _In_opt_ LPCWSTR lpParameters,
+    _In_opt_ LPCWSTR lpVerb,
     _In_ INT nShow,
     _In_ ULONG mTimeOut);
 
 BOOL supRunProcess(
-    _In_ LPWSTR lpszProcessName,
-    _In_opt_ LPWSTR lpszParameters);
+    _In_ LPCWSTR lpFile,
+    _In_opt_ LPCWSTR lpParameters);
 
 void supCopyMemory(
     _Inout_ void *dest,
@@ -226,7 +180,7 @@ VOID ucmShowMessageById(
 
 VOID ucmShowMessage(
     _In_ BOOL OutputToDebugger,
-    _In_ LPWSTR lpszMsg);
+    _In_ LPCWSTR lpszMsg);
 
 INT ucmShowQuestionById(
     _In_ ULONG MessageId);
@@ -248,7 +202,7 @@ BOOL sxsFindLoaderEntry(
     _In_ PSXS_SEARCH_CONTEXT Context);
 
 VOID supDebugPrint(
-    _In_ LPWSTR ApiName,
+    _In_ LPCWSTR ApiName,
     _In_ DWORD status);
 
 PVOID supVirtualAlloc(
@@ -279,31 +233,31 @@ BOOL supRegDeleteKeyRecursive(
 BOOL supSetEnvVariableEx(
     _In_ BOOL fRemove,
     _In_opt_ LPWSTR lpKeyName,
-    _In_ LPWSTR lpVariableName,
-    _In_opt_ LPWSTR lpVariableData);
+    _In_ LPCWSTR lpVariableName,
+    _In_opt_ LPCWSTR lpVariableData);
 
 BOOL supSetEnvVariable(
     _In_ BOOL fRemove,
     _In_opt_ LPWSTR lpKeyName,
-    _In_ LPWSTR lpVariableName,
-    _In_opt_ LPWSTR lpVariableData);
+    _In_ LPCWSTR lpVariableName,
+    _In_opt_ LPCWSTR lpVariableData);
 
 BOOL supSetEnvVariable2(
     _In_ BOOL fRemove,
     _In_opt_ LPWSTR lpKeyName,
-    _In_ LPWSTR lpVariableName,
-    _In_opt_ LPWSTR lpVariableData);
+    _In_ LPCWSTR lpVariableName,
+    _In_opt_ LPCWSTR lpVariableData);
 
 BOOL supSetMountPoint(
     _In_ HANDLE hDirectory,
-    _In_ LPWSTR lpTarget,
-    _In_ LPWSTR lpPrintName);
+    _In_ LPCWSTR lpTarget,
+    _In_ LPCWSTR lpPrintName);
 
 BOOL supDeleteMountPoint(
     _In_ HANDLE hDirectory);
 
 HANDLE supOpenDirectoryForReparse(
-    _In_ LPWSTR lpDirectory);
+    _In_ LPCWSTR lpDirectory);
 
 BOOL supWinstationToName(
     _In_opt_ HWINSTA hWinsta,
@@ -345,11 +299,7 @@ PVOID supGetSystemInfo(
     _In_ SYSTEM_INFORMATION_CLASS SystemInformationClass);
 
 BOOL supIsCorImageFile(
-    PVOID ImageBase);
-
-BOOL supIsConsentApprovedInterface(
-    _In_ LPWSTR InterfaceName,
-    _Out_ PBOOL IsApproved);
+    _In_ PVOID ImageBase);
 
 PVOID supEncodePointer(
     _In_ PVOID Pointer);
@@ -382,42 +332,12 @@ VOID supDestroyUacmeContext(
 NTSTATUS supEnableDisableWow64Redirection(
     _In_ BOOL bDisable);
 
-BOOLEAN supIsNetfx48PlusInstalled(
-    VOID);
-
 NTSTATUS supGetProcessDebugObject(
     _In_ HANDLE ProcessHandle,
     _Out_ PHANDLE DebugObjectHandle);
 
-BOOLEAN supInitFusion(
-    _In_ DWORD dwVersion);
-
-HRESULT supFusionGetAssemblyPath(
-    _In_ IAssemblyCache* pInterface,
-    _In_ LPWSTR lpAssemblyName,
-    _Inout_ LPWSTR* lpAssemblyPath);
-
-BOOLEAN supFusionGetAssemblyPathByName(
-    _In_ LPWSTR lpAssemblyName,
-    _Inout_ LPWSTR* lpAssemblyPath);
-
 BOOL supIsProcessRunning(
     _In_ LPWSTR ProcessName);
-
-BOOL supFusionGetImageMVID(
-    _In_ LPWSTR lpImageName,
-    _Out_ GUID* ModuleVersionId);
-
-BOOL supFusionScanDirectory(
-    _In_ LPWSTR lpDirectory,
-    _In_ LPWSTR lpExtension,
-    _In_ pfnFusionScanFilesCallback pfnCallback,
-    _In_opt_ PVOID pvUserContext);
-
-BOOL supFusionFindFileByMVIDCallback(
-    _In_ LPWSTR CurrentDirectory,
-    _In_ WIN32_FIND_DATA* FindData,
-    _In_ PVOID UserContext);
 
 void supBinTextEncode(
     _In_ unsigned __int64 x,
@@ -466,9 +386,9 @@ NTSTATUS supRegisterShellAssoc(
     _In_ LPCWSTR pszExt,
     _In_ LPCWSTR pszProgId,
     _In_ USER_ASSOC_PTR* UserAssocFunc,
-    _In_ LPWSTR lpszPayload,
+    _In_ LPCWSTR lpszPayload,
     _In_ BOOL fCustomURIScheme,
-    _In_opt_ LPWSTR pszDefaultValue);
+    _In_opt_ LPCWSTR pszDefaultValue);
 
 NTSTATUS supUnregisterShellAssocEx(
     _In_ BOOLEAN fResetOnly,
@@ -485,18 +405,6 @@ NTSTATUS supResetShellAssoc(
     _In_ LPCWSTR pszExt,
     _In_opt_ LPCWSTR pszProgId,
     _In_ USER_ASSOC_PTR* UserAssocFunc);
-
-BOOL supGetAppxIdValue(
-    _In_ LPWSTR lpKey,
-    _In_ LPWSTR lpPackageName,
-    _Inout_ LPWSTR* lpAppxId,
-    _Inout_ PDWORD pcbAppxId);
-
-BOOL supGetAppxId(
-    _In_ LPWSTR lpComponentName,
-    _In_ LPWSTR lpPackageName,
-    _Out_ LPWSTR* lpAppxId,
-    _Out_ PDWORD pcbAppxId);
 
 BOOL supStopTaskByName(
     _In_ LPCWSTR TaskFolder,
@@ -520,6 +428,28 @@ HANDLE supRunProcessFromParent(
 RPC_STATUS supCreateBindingHandle(
     _In_ RPC_WSTR RpcInterfaceUuid,
     _Out_ RPC_BINDING_HANDLE* BindingHandle);
+
+BOOL supConcatenatePaths(
+    _Inout_ LPWSTR Target,
+    _In_ LPCWSTR Path,
+    _In_ SIZE_T TargetBufferSize);
+
+typedef BOOL(CALLBACK* pfnEnumProcessCallback)(
+    _In_ PSYSTEM_PROCESSES_INFORMATION ProcessEntry,
+    _In_opt_ PVOID UserContext
+    );
+
+BOOL supEnumProcessesForSession(
+    _In_ ULONG SessionId,
+    _In_ pfnEnumProcessCallback Callback,
+    _In_opt_ PVOID UserContext);
+
+BOOL supRemoveDirectoryRecursive(
+    _In_ LPCWSTR Path);
+
+VOID supEnableToastForProtocol(
+    _In_ LPCWSTR lpProtocol,
+    _In_ BOOL fEnable);
 
 #ifdef _DEBUG
 #define supDbgMsg(Message)  OutputDebugString(Message)

