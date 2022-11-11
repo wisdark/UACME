@@ -4,9 +4,9 @@
 *
 *  TITLE:       GLOBAL.H
 *
-*  VERSION:     3.59
+*  VERSION:     3.62
 *
-*  DATE:        04 Feb 2022
+*  DATE:        07 Jul 2022
 *
 *  Common header file for the program support routines.
 *
@@ -36,8 +36,6 @@
 #pragma warning(disable: 28159)
 
 #define PAYLOAD_ID_NONE MAXDWORD
-
-#define USER_REQUESTS_AUTOAPPROVED FALSE //auto approve any asking dialogs
 
 #define SECRETS_ID IDR_SECRETS
 
@@ -84,6 +82,7 @@
 #include "compress.h"
 #include "aic.h"
 #include "stub.h"
+#include "console.h"
 #include "methods\methods.h"
 
 //default execution flow
@@ -100,8 +99,6 @@ typedef struct _UACME_SHARED_CONTEXT {
 
 typedef struct _UACME_CONTEXT {
     BOOLEAN                 IsWow64;
-    BOOLEAN                 UserRequestsAutoApprove;
-    BOOL                    OutputToDebugger;
     ULONG                   Cookie;
     ULONG                   dwBuildNumber;
     ULONG                   AkagiFlag;
@@ -112,6 +109,8 @@ typedef struct _UACME_CONTEXT {
 
     PVOID                   ucmHeap;
     pfnDecompressPayload    DecompressRoutine;
+    pswprintf_s             swprintf_s;
+    
     UACME_FUSION_CONTEXT    FusionContext;
     UACME_SHARED_CONTEXT    SharedContext;
 
@@ -145,10 +144,9 @@ typedef struct _UACME_PARAM_BLOCK {
 } UACME_PARAM_BLOCK, *PUACME_PARAM_BLOCK;
 
 typedef UINT(WINAPI *pfnEntryPoint)(
-    _In_opt_ UCM_METHOD Method,
+    _In_ UCM_METHOD Method,
     _In_reads_or_z_opt_(OptionalParameterLength) LPWSTR OptionalParameter,
-    _In_opt_ ULONG OptionalParameterLength,
-    _In_ BOOL OutputToDebugger
+    _In_ ULONG OptionalParameterLength
     );
 
 typedef struct _UACME_THREAD_CONTEXT {

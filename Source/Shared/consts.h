@@ -4,9 +4,9 @@
 *
 *  TITLE:       CONSTS.H
 *
-*  VERSION:     3.59
+*  VERSION:     3.63
 *
-*  DATE:        04 Feb 2022
+*  DATE:        16 Jul 2022
 *
 *  Global consts definition file.
 *
@@ -24,31 +24,13 @@
 #define AKAGI_XOR_KEY               'naka'
 #define AKAGI_XOR_KEY2              ' pta'
 
-//"Usage: Akagi.exe [Method] [OptionalParamToExecute]"
-#define IDSB_USAGE_HELP                 0
-
-//"Admin account with limited token required."
-#define IDSB_USAGE_ADMIN_REQUIRED       1
-
-//"Please enable UAC for this account."
-#define IDSB_USAGE_UAC_REQUIRED         2
-
-//"Wow64 detected, use x64 version of this tool."
-#define ISDB_USAGE_WOW_DETECTED         3
-
-//"This method only works with x86-32 Windows or from Wow64"
-#define ISDB_USAGE_WOW64WIN32ONLY       4
-
-//"This method fixed/unavailable in the current version of Windows, do you still want to continue?"
-#define ISDB_USAGE_UACFIX               5
-
 //"UACMe"
 #define ISDB_PROGRAMNAME                6
 
 #define UCM_VERSION_MAJOR       3
-#define UCM_VERSION_MINOR       5
-#define UCM_VERSION_REVISION    9
-#define UCM_VERSION_BUILD       2202
+#define UCM_VERSION_MINOR       6
+#define UCM_VERSION_REVISION    3
+#define UCM_VERSION_BUILD       2207
 
 #define SUPRUNPROCESS_TIMEOUT_DEFAULT 12000
 
@@ -140,6 +122,7 @@
 #define FUBUKI_ENTRYPOINT_SXS           "MpThreatOpen"
 #define FUBUKI_ENTRYPOINT_PCAEXE        "MpManagerStatusQuery"
 #define FUBUKI_ENTRYPOINT_PCADLL        "MpManagerStatusQueryEx"
+#define AKATSUKI_ENTRYPOINT_EXE         "Wow64LogMessageArgList" 
 #pragma endregion
 
 //
@@ -152,6 +135,7 @@
 #define DISMCORE_DLL                L"dismcore.dll"
 #define DUSER_DLL                   L"duser.dll"
 #define GDIPLUS_DLL                 L"GdiPlus.dll"
+#define ISCSIEXE_DLL                L"iscsiexe.dll"
 #define OSKSUPPORT_DLL              L"OskSupport.dll"
 #define PCADM_DLL                   L"pcadm.dll"
 #define SHELL32_DLL                 L"shell32.dll"
@@ -178,6 +162,7 @@
 #define EVENTVWR_EXE                L"eventvwr.exe"
 #define EXPLORER_EXE                L"explorer.exe"
 #define FODHELPER_EXE               L"fodhelper.exe"
+#define ISCSICPL_EXE                L"iscsicpl.exe"
 #define MMC_EXE                     L"mmc.exe"
 #define MSCONFIG_EXE                L"msconfig.exe"
 #define MSCHEDEXE_EXE               L"mschedexe.exe"
@@ -225,6 +210,7 @@
 //
 #define MYSTERIOUSCUTETHING         L"pe386" //PYSH
 #define ABSOLUTEWIN                 L"lzx32" //PYSH
+#define THEOLDNEWTHING              L"hui32" //PYSH
 
 //
 // SxS
@@ -274,6 +260,9 @@
 #define T_CLSID_EditionUpgradeManager        L"{17CCA47D-DAE5-4E4A-AC42-CC54E28F334A}"
 #define T_CLSID_IEAAddonInstaller            L"{BDB57FF2-79B9-4205-9447-F5FE85F37312}"
 #define T_CLSID_SecurityCenter               L"{E9495B87-D950-4AB5-87A5-FF6D70BF3E90}"
+#define T_CLSID_VFServer                     L"{A6BFEA43-501F-456F-A845-983D3AD7B8F0}"
+#define T_CLSID_VFServerDiagCpl              L"{12C21EA7-2EB8-4B55-9249-AC243DA8C666}"
+#define T_CLSID_DiagnosticProfile            L"{D0B7E02C-E1A3-11DC-81FF-001185AE5E76}"
 #pragma endregion
 
 //

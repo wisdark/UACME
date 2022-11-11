@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2021
+*  (C) COPYRIGHT AUTHORS, 2014 - 2022
 *
 *  TITLE:       SUP.H
 *
-*  VERSION:     3.58
+*  VERSION:     3.63
 *
-*  DATE:        01 Dec 2021
+*  DATE:        16 Jul 2022
 *
 *  Common header file for the program support routines.
 *
@@ -17,6 +17,12 @@
 *
 *******************************************************************************/
 #pragma once
+
+typedef int(__cdecl* pswprintf_s)(
+    wchar_t* buffer,
+    size_t sizeOfBuffer,
+    const wchar_t* format,
+    ...);
 
 #define TEXT_SECTION ".text"
 #define TEXT_SECTION_LEGNTH sizeof(TEXT_SECTION)
@@ -142,6 +148,12 @@ PBYTE supReadFileToBuffer(
     _In_ LPCWSTR lpFileName,
     _Inout_opt_ LPDWORD lpBufferSize);
 
+HANDLE supRunProcess3(
+    _In_ LPCWSTR lpFile,
+    _In_opt_ LPCWSTR lpParameters,
+    _In_opt_ LPCWSTR lpVerb,
+    _In_ INT nShow);
+
 BOOL supRunProcess2(
     _In_ LPCWSTR lpFile,
     _In_opt_ LPCWSTR lpParameters,
@@ -173,17 +185,6 @@ BOOLEAN supVerifyMappedImageMatchesChecksum(
 BOOLEAN supSetCheckSumForMappedFile(
     _In_ PVOID BaseAddress,
     _In_ ULONG CheckSum);
-
-VOID ucmShowMessageById(
-    _In_ BOOL OutputToDebugger,
-    _In_ ULONG MessageId);
-
-VOID ucmShowMessage(
-    _In_ BOOL OutputToDebugger,
-    _In_ LPCWSTR lpszMsg);
-
-INT ucmShowQuestionById(
-    _In_ ULONG MessageId);
 
 PBYTE supLdrQueryResourceData(
     _In_ ULONG_PTR ResourceId,
@@ -248,6 +249,14 @@ BOOL supSetEnvVariable2(
     _In_ LPCWSTR lpVariableName,
     _In_opt_ LPCWSTR lpVariableData);
 
+_Success_(return)
+BOOL supReplaceEnvironmentVariableValue(
+    _In_opt_ LPWSTR lpKeyName,
+    _In_ LPWSTR lpVariableName,
+    _In_ DWORD dwType,
+    _In_opt_ LPWSTR lpVariableData,
+    _Out_opt_ PVOID* lpOldVariableData);
+
 BOOL supSetMountPoint(
     _In_ HANDLE hDirectory,
     _In_ LPCWSTR lpTarget,
@@ -292,6 +301,10 @@ NTSTATUS supRegReadValue(
     _Out_ ULONG *BufferSize,
     _In_opt_ HANDLE hHeap);
 
+NTSTATUS supRegCurrentUserDeleteSubKeyValue(
+    _In_ LPWSTR SubKey,
+    _In_ LPWSTR ValueName);
+
 BOOL supQuerySystemRoot(
     _Inout_ PVOID Context);
 
@@ -323,8 +336,7 @@ PVOID supCreateUacmeContext(
     _In_ ULONG Method,
     _In_reads_or_z_opt_(OptionalParameterLength) LPWSTR OptionalParameter,
     _In_ ULONG OptionalParameterLength,
-    _In_ PVOID DecompressRoutine,
-    _In_ BOOL OutputToDebugger);
+    _In_ PVOID DecompressRoutine);
 
 VOID supDestroyUacmeContext(
     _In_ PVOID Context);
@@ -350,7 +362,7 @@ VOID supGenerateSharedObjectName(
 VOID supSetGlobalCompletionEvent(
     VOID);
 
-VOID supWaitForGlobalCompletionEvent(
+NTSTATUS supWaitForGlobalCompletionEvent(
     VOID);
 
 NTSTATUS supOpenClassesKey(
@@ -450,6 +462,10 @@ BOOL supRemoveDirectoryRecursive(
 VOID supEnableToastForProtocol(
     _In_ LPCWSTR lpProtocol,
     _In_ BOOL fEnable);
+
+ULONG supWaitForChildProcesses(
+    _In_ LPCWSTR lpProcessName,
+    _In_ DWORD dwWaitMiliseconds);
 
 #ifdef _DEBUG
 #define supDbgMsg(Message)  OutputDebugString(Message)

