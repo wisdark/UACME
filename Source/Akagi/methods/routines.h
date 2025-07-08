@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2014 - 2024
+*  (C) COPYRIGHT AUTHORS, 2014 - 2025
 *
 *  TITLE:       ROUTINES.H
 *
-*  VERSION:     3.66
+*  VERSION:     3.68
 *
-*  DATE:        03 Apr 2024
+*  DATE:        07 Mar 2025
 *
 *  Prototypes of methods for UAC bypass methods table.
 *
@@ -176,6 +176,14 @@ NTSTATUS ucmAtlHijackMethod(
     _In_ DWORD ProxyDllSize);
 
 NTSTATUS ucmSspiDatagramMethod(
+    _In_ PVOID ProxyDll,
+    _In_ DWORD ProxyDllSize);
+
+NTSTATUS ucmRequestTraceMethod(
+    _In_ PVOID ProxyDll,
+    _In_ DWORD ProxyDllSize);
+
+NTSTATUS ucmQuickAssistMethod(
     _In_ PVOID ProxyDll,
     _In_ DWORD ProxyDllSize);
 

